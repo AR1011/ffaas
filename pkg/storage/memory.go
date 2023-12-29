@@ -2,9 +2,11 @@ package storage
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/anthdm/ffaas/pkg/types"
+	"github.com/anthdm/ffaas/pkg/utils"
 	"github.com/google/uuid"
 )
 
@@ -76,4 +78,45 @@ func (s *MemoryStore) GetDeploy(id uuid.UUID) (*types.Deploy, error) {
 		return nil, fmt.Errorf("could not find deployment with id (%s)", id)
 	}
 	return deploy, nil
+}
+
+func (s *MemoryStore) AppendApplicationLogs(appID uuid.UUID, stdout string, stderr string) error {
+	stdoutFile, stderrFile, err := utils.GetStdioByAppID(appID)
+	if err != nil {
+		return err
+	}
+
+	stdout += "\n"
+	stderr += "\n"
+
+	_, err = stdoutFile.Write([]byte(stdout))
+	if err != nil {
+		return err
+	}
+
+	_, err = stderrFile.Write([]byte(stderr))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *MemoryStore) GetApplicationLogs(appID uuid.UUID) (*types.Logs, error) {
+	logs := &types.Logs{}
+
+	stdout, stderr, err := utils.ReadStdioByAppID(appID)
+	if err != nil {
+		return logs, err
+	}
+
+	// temp just for better viewing
+	logs.Stderr = strings.Split(stderr, "\n")
+	logs.Stdout = strings.Split(stdout, "\n")
+
+	// remove empty strings
+	utils.RemoveEmptyStrings(&logs.Stderr)
+	utils.RemoveEmptyStrings(&logs.Stdout)
+
+	return logs, nil
 }

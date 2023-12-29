@@ -9,6 +9,8 @@ test:
 
 clean:
 	@rm -rf bin/ffaas
+	@rm -rf ./logs/*
+	@rm -rf ./tmp/*
 
 goex:
 	GOOS=wasip1 GOARCH=wasm go build -o examples/go/app.wasm examples/go/main.go 

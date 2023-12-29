@@ -1,8 +1,10 @@
 package wasm
 
 import (
+	"encoding/json"
 	"net/http"
 
+	"github.com/anthdm/ffaas/pkg/api"
 	"github.com/anthdm/ffaas/pkg/runtime"
 	"github.com/anthdm/ffaas/pkg/storage"
 	"github.com/go-chi/chi/v5"
@@ -33,33 +35,44 @@ func (s *Server) Listen(addr string) error {
 }
 
 func (s *Server) initRoutes() {
-	s.router.Handle("/{appID}", http.HandlerFunc(s.handleRequest))
+	s.router.Handle("/{appID}", api.UseTimerMiddleware(http.HandlerFunc(s.handleRequest)))
+}
+
+// temp
+type handleRequestResponse struct {
+	Error string `json:"error"`
 }
 
 func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request) {
+	requestID := uuid.New()
+	w.Header().Set("X-Request-ID", requestID.String())
+
 	appID, err := uuid.Parse(chi.URLParam(r, ("appID")))
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(err.Error()))
+		writeJson(w, http.StatusNotFound, handleRequestResponse{
+			Error: err.Error(),
+		})
 		return
 	}
 	app, err := s.store.GetApplication(appID)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(err.Error()))
+		writeJson(w, http.StatusNotFound, handleRequestResponse{
+			Error: err.Error(),
+		})
 		return
 	}
 	if !app.HasActiveDeploy() {
-		w.WriteHeader(http.StatusNotFound)
-		// TODO: might want to render something decent?
-		w.Write([]byte("application does not have an active deploy yet"))
+		writeJson(w, http.StatusNotFound, handleRequestResponse{
+			Error: "no active deploy",
+		})
 		return
 
 	}
 	deploy, err := s.store.GetDeploy(app.ActiveDeployID)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(err.Error()))
+		writeJson(w, http.StatusNotFound, handleRequestResponse{
+			Error: err.Error(),
+		})
 		return
 	}
 	compCache, ok := s.cache.Get(app.ID)
@@ -69,8 +82,9 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	reqPlugin, err := runtime.NewRequestModule(r)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		writeJson(w, http.StatusInternalServerError, handleRequestResponse{
+			Error: err.Error(),
+		})
 		return
 	}
 
@@ -78,15 +92,29 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request) {
 		Blob:          deploy.Blob,
 		Cache:         compCache,
 		RequestPlugin: reqPlugin,
+		Env:           app.Environment,
+		RequestID:     requestID,
+		AppID:         app.ID,
+		Store:         s.store,
 	}
 	if err := runtime.Run(r.Context(), args); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		writeJson(w, http.StatusInternalServerError, handleRequestResponse{
+			Error: err.Error(),
+		})
 		return
 	}
 	if _, err := reqPlugin.WriteResponse(w); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		writeJson(w, http.StatusInternalServerError, handleRequestResponse{
+			Error: err.Error(),
+		})
 		return
+	}
+}
+func writeJson(w http.ResponseWriter, code int, v interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	err := json.NewEncoder(w).Encode(v)
+	if err != nil {
+		panic(err)
 	}
 }

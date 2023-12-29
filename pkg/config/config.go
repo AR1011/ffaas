@@ -11,6 +11,8 @@ import (
 const defaultConfig = `
 wasmServerAddr 	= ":5000"
 apiServerAddr 	= ":3000"
+wasmServerName  = ""
+apiServerName   = ""
 `
 
 // Config holds the global configuration which is READONLY ofcourse.
@@ -19,6 +21,8 @@ var config Config
 type Config struct {
 	APIServerAddr  string
 	WASMServerAddr string
+	APIServerName  string
+	WASMServerName string
 }
 
 func Parse(path string) error {
@@ -40,7 +44,7 @@ func Get() Config {
 	return config
 }
 
-func makeURL(address string) string {
+func makeURL(address string, serverName string) string {
 	host, port, err := net.SplitHostPort(address)
 	if err != nil {
 		return ""
@@ -50,13 +54,17 @@ func makeURL(address string) string {
 		host = "0.0.0.0"
 	}
 
-	return "http://" + net.JoinHostPort(host, port)
+	if serverName == "" {
+		return "http://" + net.JoinHostPort(host, port)
+	}
+
+	return "https://" + serverName
 }
 
 func GetWasmUrl() string {
-	return makeURL(config.WASMServerAddr)
+	return makeURL(config.WASMServerAddr, config.WASMServerName)
 }
 
 func GetApiUrl() string {
-	return makeURL(config.APIServerAddr)
+	return makeURL(config.APIServerAddr, config.APIServerName)
 }

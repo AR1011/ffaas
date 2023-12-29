@@ -4,8 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 
+	"github.com/anthdm/ffaas/pkg/storage"
+	"github.com/anthdm/ffaas/pkg/utils"
+	"github.com/google/uuid"
 	"github.com/stealthrocket/wasi-go"
 	"github.com/stealthrocket/wasi-go/imports"
 	"github.com/stealthrocket/wasi-go/imports/wasi_http"
@@ -118,12 +122,15 @@ func Compile(ctx context.Context, cache wazero.CompilationCache, blob []byte) er
 	return nil
 }
 
-// TODO: add some kind of log capture...
 type Args struct {
 	Blob          []byte
 	Cache         wazero.CompilationCache
 	RequestPlugin RequestPlugin
 	Env           map[string]string
+	RequestID     uuid.UUID
+	AppID         uuid.UUID
+
+	Store storage.Store
 }
 
 func Run(ctx context.Context, args Args) error {
@@ -142,23 +149,36 @@ func Run(ctx context.Context, args Args) error {
 	// TODO: Can't close cause it will invalidate the cache.
 	// defer wasmModule.Close(ctx)
 
-	// TODO: Open with append mode or configure it like that ok!
-	// f, err := os.Create("foo")
-	// if err != nil {
-	// 	return err
-	// }
-	//f.Seek(0, io.SeekStart)
-	// fd := int(f.Fd())
-	fd := -1
+	// TODO: probably handled better
+	tempDir, err := utils.CreateTemporyWorkDir(args.RequestID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stdout, stderr := utils.CreateTempStdioFiles(args.RequestID)
+
+	defer func() {
+		// reads the logs from temp files and closes them
+		stdoutLogs, stderrLogs := utils.CleanupTempStdioFiles(stdout, stderr)
+
+		// appends the logs to the application logs
+		if args.Store != nil {
+			_ = args.Store.AppendApplicationLogs(args.AppID, stdoutLogs, stderrLogs)
+		} else {
+			log.Println("no store provided")
+		}
+
+		// removes the temp work dir and closes files
+		utils.CleanupTemporaryWorkDir(args.RequestID)
+	}()
 
 	builder := imports.NewBuilder().
 		WithName("ffaas").
 		WithArgs().
-		WithStdio(fd, fd, fd).
+		WithStdio(-1, int(stdout.Fd()), int(stderr.Fd())).
 		// TODO: env...
 		WithEnv().
-		// TODO: we want to mount this to some virtual folder?
-		WithDirs("/").
+		WithDirs(tempDir).
 		WithListens().
 		WithDials().
 		WithNonBlockingStdio(false).

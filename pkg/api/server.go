@@ -36,11 +36,12 @@ func (s *Server) Listen(addr string) error {
 
 func (s *Server) initRouter() {
 	s.router = chi.NewRouter()
-	s.router.Get("/status", handleStatus)
-	s.router.Get("/application/{appID}", makeAPIHandler(s.handleGetApplication))
-	s.router.Post("/application", makeAPIHandler(s.handleCreateApp))
-	s.router.Post("/application/{appID}/deploy", makeAPIHandler(s.handleCreateDeploy))
-	s.router.Post("/application/{appID}/rollback", makeAPIHandler(s.handleCreateRollback))
+	s.router.Get("/status", UseTimerMiddleware(handleStatus))
+	s.router.Get("/application/{appID}", UseTimerMiddleware(makeAPIHandler(s.handleGetApplication)))
+	s.router.Post("/application", UseTimerMiddleware(makeAPIHandler(s.handleCreateApp)))
+	s.router.Post("/application/{appID}/deploy", UseTimerMiddleware(makeAPIHandler(s.handleCreateDeploy)))
+	s.router.Post("/application/{appID}/rollback", UseTimerMiddleware(makeAPIHandler(s.handleCreateRollback)))
+	s.router.Get("/application/{appID}/logs", UseTimerMiddleware(makeAPIHandler(s.handleGetLogs)))
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {
@@ -70,15 +71,20 @@ func (s *Server) handleCreateApp(w http.ResponseWriter, r *http.Request) error {
 	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
 		return writeJSON(w, http.StatusBadRequest, ErrorResponse(ErrDecodeRequestBody))
 	}
+
 	defer r.Body.Close()
+
 	if err := params.validate(); err != nil {
 		return writeJSON(w, http.StatusBadRequest, ErrorResponse(err))
 	}
+
 	app := types.NewApplication(params.Name, params.Environment)
 	app.Endpoint = config.GetWasmUrl() + "/" + app.ID.String()
+
 	if err := s.store.CreateApplication(app); err != nil {
 		return writeJSON(w, http.StatusBadRequest, ErrorResponse(err))
 	}
+
 	return writeJSON(w, http.StatusOK, app)
 }
 
@@ -163,4 +169,19 @@ func (s *Server) handleCreateRollback(w http.ResponseWriter, r *http.Request) er
 	s.cache.Delete(currentDeployID)
 
 	return writeJSON(w, http.StatusOK, map[string]any{"deploy": deploy.ID})
+}
+
+func (s *Server) handleGetLogs(w http.ResponseWriter, r *http.Request) error {
+	appID, err := uuid.Parse(chi.URLParam(r, "appID"))
+	if err != nil {
+		return writeJSON(w, http.StatusBadRequest, ErrorResponse(err))
+	}
+
+	logs, err := s.store.GetApplicationLogs(appID)
+	if err != nil {
+		return writeJSON(w, http.StatusNotFound, ErrorResponse(err))
+	}
+
+	return writeJSON(w, http.StatusOK, logs)
+
 }

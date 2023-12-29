@@ -11,4 +11,8 @@ type Store interface {
 	GetApplication(uuid.UUID) (*types.Application, error)
 	CreateDeploy(*types.Deploy) error
 	GetDeploy(uuid.UUID) (*types.Deploy, error)
+
+	// to be discussed
+	AppendApplicationLogs(appID uuid.UUID, stdout string, stderr string) error
+	GetApplicationLogs(appID uuid.UUID) (*types.Logs, error)
 }
