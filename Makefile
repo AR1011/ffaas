@@ -18,6 +18,16 @@ proto:
 
 clean:
 	@rm -rf bin/ffaas
+	@rm -rf bin/wasmserver
+	@rm ./examples/*/*.wasm
 
 goex:
-	GOOS=wasip1 GOARCH=wasm go build -o examples/go/app.wasm examples/go/main.go 
+	GOOS=wasip1 GOARCH=wasm go build -o examples/go-endpoint/endpoint.wasm examples/go-endpoint/main.go 
+	GOOS=wasip1 GOARCH=wasm go build -o examples/go-cron/cron.wasm examples/go-cron/main.go
+	GOOS=wasip1 GOARCH=wasm go build -o examples/go-process/process.wasm examples/go-process/main.go
+
+redis-up:
+	docker compose -f ./redis.yml up -d
+
+redis-down:
+	docker compose -f ./redis.yml down

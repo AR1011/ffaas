@@ -14,6 +14,7 @@ import (
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/cluster"
 	"github.com/anthdm/hollywood/remote"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -27,7 +28,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	store, err := storage.NewRedisStore()
+	store, err := storage.NewRedisStore(&redis.Options{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -50,7 +51,8 @@ func main() {
 		ID:              "member1",
 		ClusterProvider: cluster.NewSelfManagedProvider(),
 	})
-	c.RegisterKind(actrs.KindRuntime, actrs.NewRuntime(store, modCache), &cluster.KindConfig{})
+	c.RegisterKind(actrs.KindEndpointRuntime, actrs.NewEndpointRuntime(store, modCache), &cluster.KindConfig{})
+	c.RegisterKind(actrs.KindCronRuntime, actrs.NewCronRuntime(store, modCache), &cluster.KindConfig{})
 	c.Start()
 
 	server := actrs.NewWasmServer(config.Get().WASMServerAddr, c, store, metricStore, modCache)

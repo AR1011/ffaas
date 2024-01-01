@@ -15,3 +15,11 @@ message HTTPResponse {
 	int32 statusCode = 2;
 	string RequestID = 3;
 }
+
+message StartCronJob {
+	string ID = 1;
+}
+
+message StopCronJob {
+	string ID = 1;
+}

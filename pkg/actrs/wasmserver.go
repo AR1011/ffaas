@@ -4,9 +4,11 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/anthdm/ffaas/pkg/storage"
+	"github.com/anthdm/ffaas/pkg/types"
 	"github.com/anthdm/ffaas/proto"
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/cluster"
@@ -25,6 +27,10 @@ func newRequestWithResponse(request *proto.HTTPRequest) requestWithResponse {
 		request:  request,
 		response: make(chan *proto.HTTPResponse, 1),
 	}
+}
+
+type startCronRequest struct {
+	ID uuid.UUID
 }
 
 // WasmServer is an HTTP server that will proxy and route the request to the corresponding function.
@@ -61,15 +67,22 @@ func (s *WasmServer) Receive(c *actor.Context) {
 	switch msg := c.Message().(type) {
 	case actor.Started:
 		s.initialize(c)
+
 	case actor.Stopped:
+
 	case requestWithResponse:
 		s.responses[msg.request.ID] = msg.response
-		s.sendRequestToRuntime(msg.request)
+		s.sendEndpointRequestToRuntime(msg.request)
+
+	case startCronRequest:
+		s.sendCronStartRequestToRuntime(msg.ID)
+
 	case *proto.HTTPResponse:
 		if resp, ok := s.responses[msg.RequestID]; ok {
 			resp <- msg
 			delete(s.responses, msg.RequestID)
 		}
+
 	}
 }
 
@@ -80,9 +93,19 @@ func (s *WasmServer) initialize(c *actor.Context) {
 	}()
 }
 
-func (s *WasmServer) sendRequestToRuntime(req *proto.HTTPRequest) {
-	pid := s.cluster.Activate(KindRuntime, &cluster.ActivationConfig{})
+func (s *WasmServer) sendEndpointRequestToRuntime(req *proto.HTTPRequest) {
+	pid := s.cluster.Activate(KindEndpointRuntime, &cluster.ActivationConfig{})
 	s.cluster.Engine().SendWithSender(pid, req, s.self)
+}
+
+func (s *WasmServer) sendCronStartRequestToRuntime(id uuid.UUID) {
+	pid := s.cluster.Activate(KindCronRuntime, &cluster.ActivationConfig{})
+	s.cluster.Engine().SendWithSender(pid, &proto.StartCronJob{ID: id.String()}, s.self)
+}
+
+func (s *WasmServer) sendCronStopRequestToRuntime(id uuid.UUID) {
+	pid := s.cluster.Activate(KindCronRuntime, &cluster.ActivationConfig{})
+	s.cluster.Engine().SendWithSender(pid, &proto.StopCronJob{ID: id.String()}, s.self)
 }
 
 func (s *WasmServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -98,16 +121,22 @@ func (s *WasmServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeResponse(w, http.StatusBadRequest, []byte(err.Error()))
 		return
 	}
-	endpoint, err := s.store.GetEndpoint(endpointID)
+	e, err := s.store.GetApp(endpointID)
 	if err != nil {
 		writeResponse(w, http.StatusNotFound, []byte(err.Error()))
 		return
 	}
+	endpoint, ok := e.(*types.Endpoint)
+	if !ok {
+		writeResponse(w, http.StatusInternalServerError, []byte("could not cast endpoint type"))
+		return
+	}
+
 	if !endpoint.HasActiveDeploy() {
 		writeResponse(w, http.StatusNotFound, []byte("endpoint does not have an active deploy yet"))
 		return
 	}
-	req, err := makeProtoRequest(r)
+	req, err := makeEndpointProtoRequest(r)
 	if err != nil {
 		writeResponse(w, http.StatusInternalServerError, []byte(err.Error()))
 		return
@@ -122,7 +151,7 @@ func (s *WasmServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp.Response)
 }
 
-func makeProtoRequest(r *http.Request) (*proto.HTTPRequest, error) {
+func makeEndpointProtoRequest(r *http.Request) (*proto.HTTPRequest, error) {
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
@@ -131,11 +160,29 @@ func makeProtoRequest(r *http.Request) (*proto.HTTPRequest, error) {
 		ID:     uuid.NewString(),
 		Body:   b,
 		Method: r.Method,
-		URL:    r.URL.String(),
+		URL:    trimmedEndpointFromURL(r.URL),
 	}, nil
+}
+
+func makeStartCronProtoRequest(cron *types.Cron) *proto.StartCronJob {
+	return &proto.StartCronJob{
+		ID: cron.ID.String(),
+	}
+}
+
+func makeStopCronProtoRequest(cron *types.Cron) *proto.StopCronJob {
+	return &proto.StopCronJob{
+		ID: cron.ID.String(),
+	}
 }
 
 func writeResponse(w http.ResponseWriter, code int, b []byte) {
 	w.WriteHeader(http.StatusNotFound)
 	w.Write(b)
+}
+
+func trimmedEndpointFromURL(url *url.URL) string {
+	path := strings.TrimPrefix(url.Path, "/")
+	pathParts := strings.Split(path, "/")
+	return "/" + strings.Join(pathParts[1:], "/")
 }

@@ -5,21 +5,23 @@ import (
 	"github.com/google/uuid"
 )
 
+// type Store interface {
+// 	CreateEndpoint(*types.Endpoint) error
+// 	UpdateEndpoint(uuid.UUID, UpdateEndpointParams) error
+// 	GetEndpoint(uuid.UUID) (*types.Endpoint, error)
+// 	CreateDeploy(*types.EndpointDeploy) error
+// 	GetDeploy(uuid.UUID) (*types.EndpointDeploy, error)
+// }
+
 type Store interface {
-	CreateEndpoint(*types.Endpoint) error
-	UpdateEndpoint(uuid.UUID, UpdateEndpointParams) error
-	GetEndpoint(uuid.UUID) (*types.Endpoint, error)
-	CreateDeploy(*types.Deploy) error
-	GetDeploy(uuid.UUID) (*types.Deploy, error)
+	CreateApp(types.App) error
+	UpdateApp(uuid.UUID, types.AppUpdateParams) error
+	GetApp(uuid.UUID) (types.App, error)
+	CreateDeploy(types.Deploy) error
+	GetDeploy(uuid.UUID) (types.Deploy, error)
 }
 
 type MetricStore interface {
-	CreateRuntimeMetric(*types.RuntimeMetric) error
-	GetRuntimeMetrics(uuid.UUID) ([]types.RuntimeMetric, error)
-}
-
-type UpdateEndpointParams struct {
-	Environment    map[string]string
-	ActiveDeployID uuid.UUID
-	Deploys        []*types.Deploy
+	CreateMetric(types.RuntimeMetric) error
+	GetMetrics(uuid.UUID) ([]types.RuntimeMetric, error)
 }

@@ -9,38 +9,42 @@ import (
 )
 
 type MemoryMetricStore struct {
-	mu   sync.RWMutex
-	data map[uuid.UUID][]types.RuntimeMetric
+	mu      sync.RWMutex
+	metrics map[uuid.UUID][]types.RuntimeMetric
 }
 
 func NewMemoryMetricStore() *MemoryMetricStore {
 	return &MemoryMetricStore{
-		data: make(map[uuid.UUID][]types.RuntimeMetric),
+		metrics: make(map[uuid.UUID][]types.RuntimeMetric),
 	}
 }
 
-func (s *MemoryMetricStore) CreateRuntimeMetric(metric *types.RuntimeMetric) error {
+func (s *MemoryMetricStore) CreateMetric(metric types.RuntimeMetric) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var (
 		metrics []types.RuntimeMetric
 		ok      bool
 	)
-	metrics, ok = s.data[metric.EndpointID]
+	metrics, ok = s.metrics[metric.GetID()]
 	if !ok {
 		metrics = make([]types.RuntimeMetric, 0)
 	}
-	metrics = append(metrics, *metric)
-	s.data[metric.EndpointID] = metrics
+
+	metrics = append(metrics, metric)
+
+	s.metrics[metric.GetID()] = metrics
 	return nil
 }
 
-func (s *MemoryMetricStore) GetRuntimeMetrics(endpointID uuid.UUID) ([]types.RuntimeMetric, error) {
+func (s *MemoryMetricStore) GetMetrics(id uuid.UUID) ([]types.RuntimeMetric, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	metrics, ok := s.data[endpointID]
+	metrics, ok := s.metrics[id]
 	if !ok {
-		return nil, fmt.Errorf("could not find metrics for endpoint (%s)", endpointID)
+		return nil, fmt.Errorf("could not find metrics for cron (%s)", id)
 	}
 	return metrics, nil
 }
+
+var _ MetricStore = &MemoryMetricStore{}

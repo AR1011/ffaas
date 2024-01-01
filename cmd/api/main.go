@@ -13,6 +13,7 @@ import (
 	"github.com/anthdm/ffaas/pkg/storage"
 	"github.com/anthdm/ffaas/pkg/types"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"github.com/tetratelabs/wazero"
 )
 
@@ -33,7 +34,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	store, err := storage.NewRedisStore()
+	store, err := storage.NewRedisStore(&redis.Options{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -48,7 +49,7 @@ func main() {
 }
 
 func seedEndpoint(store storage.Store, cache storage.ModCacher) {
-	b, err := os.ReadFile("examples/go/app.wasm")
+	b, err := os.ReadFile("examples/go-endpoint/endpoint.wasm")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -59,11 +60,11 @@ func seedEndpoint(store storage.Store, cache storage.ModCacher) {
 		CreatedAT:   time.Now(),
 	}
 
-	deploy := types.NewDeploy(endpoint, b)
+	deploy := types.NewEndpointDeploy(endpoint, b)
 	endpoint.ActiveDeployID = deploy.ID
 	endpoint.URL = config.GetWasmUrl() + "/" + endpoint.ID.String()
 	endpoint.DeployHistory = append(endpoint.DeployHistory, deploy)
-	store.CreateEndpoint(endpoint)
+	store.CreateApp(endpoint)
 	store.CreateDeploy(deploy)
 	fmt.Printf("endpoint seeded: %s\n", endpoint.URL)
 }
