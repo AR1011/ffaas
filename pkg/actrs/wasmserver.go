@@ -108,6 +108,7 @@ func (s *WasmServer) sendCronStopRequestToRuntime(id uuid.UUID) {
 	s.cluster.Engine().SendWithSender(pid, &proto.StopCronJob{ID: id.String()}, s.self)
 }
 
+// TODO handle stop and start cron and processes
 func (s *WasmServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/")
 	pathParts := strings.Split(path, "/")
