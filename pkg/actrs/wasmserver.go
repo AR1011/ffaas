@@ -74,8 +74,19 @@ func (s *WasmServer) Receive(c *actor.Context) {
 		s.responses[msg.request.ID] = msg.response
 		s.sendEndpointRequestToRuntime(msg.request)
 
-	case startTaskRequest:
-		s.sendTaskStartRequestToRuntime(msg.ID)
+	case *proto.StartStopResponse:
+		if resp, ok := s.responses[msg.RequestID]; ok {
+			r := &proto.HTTPResponse{}
+			if msg.Err != "" {
+				r.Response = []byte(msg.Err)
+				r.StatusCode = http.StatusInternalServerError
+			} else {
+				r.Response = []byte("ok")
+				r.StatusCode = http.StatusOK
+			}
+			resp <- r
+			delete(s.responses, msg.RequestID)
+		}
 
 	case *proto.HTTPResponse:
 		if resp, ok := s.responses[msg.RequestID]; ok {
@@ -98,14 +109,31 @@ func (s *WasmServer) sendEndpointRequestToRuntime(req *proto.HTTPRequest) {
 	s.cluster.Engine().SendWithSender(pid, req, s.self)
 }
 
-func (s *WasmServer) sendTaskStartRequestToRuntime(id uuid.UUID) {
+func (s *WasmServer) sendTaskStartRequestToRuntime(req *proto.StartRequest) {
 	pid := s.cluster.Activate(KindTaskRuntime, &cluster.ActivationConfig{})
-	s.cluster.Engine().SendWithSender(pid, &proto.StartTask{ID: id.String()}, s.self)
+	s.cluster.Engine().SendWithSender(pid, req, s.self)
 }
 
-func (s *WasmServer) sendTaskStopRequestToRuntime(id uuid.UUID) {
+func (s *WasmServer) sendTaskStopRequestToRuntime(req *proto.StopRequest) {
+	// todo make sure it sends to the runtime with the task
 	pid := s.cluster.Activate(KindTaskRuntime, &cluster.ActivationConfig{})
-	s.cluster.Engine().SendWithSender(pid, &proto.StopTask{ID: id.String()}, s.self)
+	s.cluster.Engine().SendWithSender(pid, req, s.self)
+}
+
+func (s *WasmServer) sendProcessStartRequestToRuntime(req *proto.StartRequest) {
+	pid := s.cluster.Activate(KindProcessRuntime, &cluster.ActivationConfig{})
+	s.cluster.Engine().SendWithSender(pid, req, s.self)
+}
+
+func (s *WasmServer) sendProcessStopRequestToRuntime(req *proto.StopRequest) {
+	// todo make sure it sends to the runtime with the task
+	pid := s.cluster.Activate(KindProcessRuntime, &cluster.ActivationConfig{})
+	s.cluster.Engine().SendWithSender(pid, req, s.self)
+}
+
+func (s *WasmServer) sendServeHTTPRequestToRuntime(req *proto.HTTPRequest) {
+	pid := s.cluster.Activate(KindEndpointRuntime, &cluster.ActivationConfig{})
+	s.cluster.Engine().SendWithSender(pid, req, s.self)
 }
 
 // TODO handle stop and start task and processes
@@ -113,7 +141,7 @@ func (s *WasmServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/")
 	pathParts := strings.Split(path, "/")
 	if len(pathParts) == 0 {
-		writeResponse(w, http.StatusBadRequest, []byte("invalid endpoint id given"))
+		writeResponse(w, http.StatusBadRequest, []byte("invalid application id given"))
 		return
 	}
 	id := pathParts[0]
@@ -122,21 +150,23 @@ func (s *WasmServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeResponse(w, http.StatusBadRequest, []byte(err.Error()))
 		return
 	}
-	e, err := s.store.GetApp(endpointID)
+	a, err := s.store.GetApp(endpointID)
 	if err != nil {
 		writeResponse(w, http.StatusNotFound, []byte(err.Error()))
 		return
 	}
-	endpoint, ok := e.(*types.Endpoint)
+
+	if !a.HasActiveDeploy() {
+		writeResponse(w, http.StatusNotFound, []byte("application does not have an active deploy yet"))
+		return
+	}
+
+	endpoint, ok := a.(*types.Endpoint)
 	if !ok {
 		writeResponse(w, http.StatusInternalServerError, []byte("could not cast endpoint type"))
 		return
 	}
 
-	if !endpoint.HasActiveDeploy() {
-		writeResponse(w, http.StatusNotFound, []byte("endpoint does not have an active deploy yet"))
-		return
-	}
 	req, err := makeEndpointProtoRequest(r)
 	if err != nil {
 		writeResponse(w, http.StatusInternalServerError, []byte(err.Error()))
@@ -169,15 +199,17 @@ func makeEndpointProtoRequest(r *http.Request) (*proto.HTTPRequest, error) {
 	}, nil
 }
 
-func makeStartTaskProtoRequest(task *types.Task) *proto.StartTask {
-	return &proto.StartTask{
-		ID: task.ID.String(),
+func makeStartProtoRequest(task types.App) *proto.StartRequest {
+	return &proto.StartRequest{
+		ID:        task.GetID().String(),
+		RequestID: uuid.NewString(),
 	}
 }
 
-func makeStopTaskProtoRequest(task *types.Task) *proto.StopTask {
-	return &proto.StopTask{
-		ID: task.ID.String(),
+func makeStopProtoRequest(task *types.Task) *proto.StopRequest {
+	return &proto.StopRequest{
+		ID:        task.ID.String(),
+		RequestID: uuid.NewString(),
 	}
 }
 

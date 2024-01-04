@@ -24,10 +24,18 @@ message HTTPResponse {
 	string RequestID = 3;
 }
 
-message StartTask {
+message StartRequest{
 	string ID = 1;
+	string RequestID = 2;
 }
 
-message StopTask {
+message StopRequest{
 	string ID = 1;
+	string RequestID = 2;
+}
+
+message StartStopResponse{
+	string ID = 1;
+	string RequestID = 2;
+	string err = 3;
 }

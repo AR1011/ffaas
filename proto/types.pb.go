@@ -241,16 +241,17 @@ func (x *HTTPResponse) GetRequestID() string {
 	return ""
 }
 
-type StartTask struct {
+type StartRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ID string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
+	ID        string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
+	RequestID string `protobuf:"bytes,2,opt,name=RequestID,proto3" json:"RequestID,omitempty"`
 }
 
-func (x *StartTask) Reset() {
-	*x = StartTask{}
+func (x *StartRequest) Reset() {
+	*x = StartRequest{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_types_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -258,13 +259,13 @@ func (x *StartTask) Reset() {
 	}
 }
 
-func (x *StartTask) String() string {
+func (x *StartRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*StartTask) ProtoMessage() {}
+func (*StartRequest) ProtoMessage() {}
 
-func (x *StartTask) ProtoReflect() protoreflect.Message {
+func (x *StartRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_types_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -276,28 +277,36 @@ func (x *StartTask) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use StartTask.ProtoReflect.Descriptor instead.
-func (*StartTask) Descriptor() ([]byte, []int) {
+// Deprecated: Use StartRequest.ProtoReflect.Descriptor instead.
+func (*StartRequest) Descriptor() ([]byte, []int) {
 	return file_proto_types_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *StartTask) GetID() string {
+func (x *StartRequest) GetID() string {
 	if x != nil {
 		return x.ID
 	}
 	return ""
 }
 
-type StopTask struct {
+func (x *StartRequest) GetRequestID() string {
+	if x != nil {
+		return x.RequestID
+	}
+	return ""
+}
+
+type StopRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ID string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
+	ID        string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
+	RequestID string `protobuf:"bytes,2,opt,name=RequestID,proto3" json:"RequestID,omitempty"`
 }
 
-func (x *StopTask) Reset() {
-	*x = StopTask{}
+func (x *StopRequest) Reset() {
+	*x = StopRequest{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_types_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -305,13 +314,13 @@ func (x *StopTask) Reset() {
 	}
 }
 
-func (x *StopTask) String() string {
+func (x *StopRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*StopTask) ProtoMessage() {}
+func (*StopRequest) ProtoMessage() {}
 
-func (x *StopTask) ProtoReflect() protoreflect.Message {
+func (x *StopRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_types_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -323,14 +332,84 @@ func (x *StopTask) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use StopTask.ProtoReflect.Descriptor instead.
-func (*StopTask) Descriptor() ([]byte, []int) {
+// Deprecated: Use StopRequest.ProtoReflect.Descriptor instead.
+func (*StopRequest) Descriptor() ([]byte, []int) {
 	return file_proto_types_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *StopTask) GetID() string {
+func (x *StopRequest) GetID() string {
 	if x != nil {
 		return x.ID
+	}
+	return ""
+}
+
+func (x *StopRequest) GetRequestID() string {
+	if x != nil {
+		return x.RequestID
+	}
+	return ""
+}
+
+type StartStopResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ID        string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
+	RequestID string `protobuf:"bytes,2,opt,name=RequestID,proto3" json:"RequestID,omitempty"`
+	Err       string `protobuf:"bytes,3,opt,name=err,proto3" json:"err,omitempty"`
+}
+
+func (x *StartStopResponse) Reset() {
+	*x = StartStopResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_types_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *StartStopResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartStopResponse) ProtoMessage() {}
+
+func (x *StartStopResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_types_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartStopResponse.ProtoReflect.Descriptor instead.
+func (*StartStopResponse) Descriptor() ([]byte, []int) {
+	return file_proto_types_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *StartStopResponse) GetID() string {
+	if x != nil {
+		return x.ID
+	}
+	return ""
+}
+
+func (x *StartStopResponse) GetRequestID() string {
+	if x != nil {
+		return x.RequestID
+	}
+	return ""
+}
+
+func (x *StartStopResponse) GetErr() string {
+	if x != nil {
+		return x.Err
 	}
 	return ""
 }
@@ -375,13 +454,23 @@ var file_proto_types_proto_rawDesc = []byte{
 	0x0a, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x43, 0x6f, 0x64, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28,
 	0x05, 0x52, 0x0a, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x43, 0x6f, 0x64, 0x65, 0x12, 0x1c, 0x0a,
 	0x09, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x44, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x09, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x44, 0x22, 0x1b, 0x0a, 0x09, 0x53,
-	0x74, 0x61, 0x72, 0x74, 0x54, 0x61, 0x73, 0x6b, 0x12, 0x0e, 0x0a, 0x02, 0x49, 0x44, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x49, 0x44, 0x22, 0x1a, 0x0a, 0x08, 0x53, 0x74, 0x6f, 0x70,
-	0x54, 0x61, 0x73, 0x6b, 0x12, 0x0e, 0x0a, 0x02, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x02, 0x49, 0x44, 0x42, 0x1d, 0x5a, 0x1b, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63,
-	0x6f, 0x6d, 0x2f, 0x61, 0x6e, 0x74, 0x68, 0x64, 0x6d, 0x2f, 0x72, 0x75, 0x6e, 0x2f, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x52, 0x09, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x44, 0x22, 0x3c, 0x0a, 0x0c, 0x53,
+	0x74, 0x61, 0x72, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x49,
+	0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x49, 0x44, 0x12, 0x1c, 0x0a, 0x09, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x44, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x44, 0x22, 0x3b, 0x0a, 0x0b, 0x53, 0x74, 0x6f,
+	0x70, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x49, 0x44, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x49, 0x44, 0x12, 0x1c, 0x0a, 0x09, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x49, 0x44, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x49, 0x44, 0x22, 0x53, 0x0a, 0x11, 0x53, 0x74, 0x61, 0x72, 0x74, 0x53,
+	0x74, 0x6f, 0x70, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x0e, 0x0a, 0x02, 0x49,
+	0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x49, 0x44, 0x12, 0x1c, 0x0a, 0x09, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x44, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x44, 0x12, 0x10, 0x0a, 0x03, 0x65, 0x72, 0x72,
+	0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x65, 0x72, 0x72, 0x42, 0x1d, 0x5a, 0x1b, 0x67,
+	0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x61, 0x6e, 0x74, 0x68, 0x64, 0x6d,
+	0x2f, 0x72, 0x75, 0x6e, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74,
+	0x6f, 0x33,
 }
 
 var (
@@ -396,19 +485,20 @@ func file_proto_types_proto_rawDescGZIP() []byte {
 	return file_proto_types_proto_rawDescData
 }
 
-var file_proto_types_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_proto_types_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_proto_types_proto_goTypes = []interface{}{
-	(*HTTPRequest)(nil),  // 0: proto.HTTPRequest
-	(*HeaderFields)(nil), // 1: proto.HeaderFields
-	(*HTTPResponse)(nil), // 2: proto.HTTPResponse
-	(*StartTask)(nil),    // 3: proto.StartTask
-	(*StopTask)(nil),     // 4: proto.StopTask
-	nil,                  // 5: proto.HTTPRequest.HeaderEntry
-	nil,                  // 6: proto.HTTPRequest.EnvEntry
+	(*HTTPRequest)(nil),       // 0: proto.HTTPRequest
+	(*HeaderFields)(nil),      // 1: proto.HeaderFields
+	(*HTTPResponse)(nil),      // 2: proto.HTTPResponse
+	(*StartRequest)(nil),      // 3: proto.StartRequest
+	(*StopRequest)(nil),       // 4: proto.StopRequest
+	(*StartStopResponse)(nil), // 5: proto.StartStopResponse
+	nil,                       // 6: proto.HTTPRequest.HeaderEntry
+	nil,                       // 7: proto.HTTPRequest.EnvEntry
 }
 var file_proto_types_proto_depIdxs = []int32{
-	5, // 0: proto.HTTPRequest.Header:type_name -> proto.HTTPRequest.HeaderEntry
-	6, // 1: proto.HTTPRequest.Env:type_name -> proto.HTTPRequest.EnvEntry
+	6, // 0: proto.HTTPRequest.Header:type_name -> proto.HTTPRequest.HeaderEntry
+	7, // 1: proto.HTTPRequest.Env:type_name -> proto.HTTPRequest.EnvEntry
 	1, // 2: proto.HTTPRequest.HeaderEntry.value:type_name -> proto.HeaderFields
 	3, // [3:3] is the sub-list for method output_type
 	3, // [3:3] is the sub-list for method input_type
@@ -460,7 +550,7 @@ func file_proto_types_proto_init() {
 			}
 		}
 		file_proto_types_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StartTask); i {
+			switch v := v.(*StartRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -472,7 +562,19 @@ func file_proto_types_proto_init() {
 			}
 		}
 		file_proto_types_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StopTask); i {
+			switch v := v.(*StopRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_types_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*StartStopResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -490,7 +592,7 @@ func file_proto_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_types_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

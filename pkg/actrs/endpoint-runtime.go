@@ -106,6 +106,7 @@ func (r *EndpointRuntime) Receive(c *actor.Context) {
 		c.Engine().Poison(c.PID())
 		metric := types.EndpointRuntimeMetric{
 			ID:         uuid.New(),
+			Type:       types.EndpointMetricType,
 			StartTime:  r.started,
 			Duration:   time.Since(r.started),
 			DeployID:   deploy.ID,
