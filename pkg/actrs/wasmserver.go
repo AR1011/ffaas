@@ -7,11 +7,11 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/anthdm/ffaas/pkg/storage"
-	"github.com/anthdm/ffaas/pkg/types"
-	"github.com/anthdm/ffaas/proto"
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/cluster"
+	"github.com/anthdm/run/pkg/storage"
+	"github.com/anthdm/run/pkg/types"
+	"github.com/anthdm/run/proto"
 	"github.com/google/uuid"
 )
 
@@ -142,7 +142,11 @@ func (s *WasmServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeResponse(w, http.StatusInternalServerError, []byte(err.Error()))
 		return
 	}
+	req.Runtime = endpoint.Runtime
 	req.EndpointID = endpointID.String()
+	req.ActiveDeployID = endpoint.ActiveDeployID.String()
+	req.Env = endpoint.Environment
+
 	reqres := newRequestWithResponse(req)
 
 	s.cluster.Engine().Send(s.self, reqres)

@@ -12,6 +12,7 @@ type Process struct {
 	ID             uuid.UUID         `json:"id"`
 	AppType        AppType           `json:"app_type"`
 	Name           string            `json:"name"`
+	Runtime        string            `json:"runtime"`
 	ActiveDeployID uuid.UUID         `json:"active_deploy_id"`
 	Environment    map[string]string `json:"environment"`
 	DeployHistory  []*ProcessDeploy  `json:"deploy_history"`
@@ -34,7 +35,7 @@ func (p Process) GetAppType() AppType {
 	return AppTypeProcess
 }
 
-func NewProcess(name string, env map[string]string) *Process {
+func NewProcess(name string, runtime string, env map[string]string) *Process {
 	if env == nil {
 		env = make(map[string]string)
 	}
@@ -43,6 +44,7 @@ func NewProcess(name string, env map[string]string) *Process {
 		ID:            id,
 		AppType:       AppTypeProcess,
 		Name:          name,
+		Runtime:       runtime,
 		Environment:   env,
 		DeployHistory: []*ProcessDeploy{},
 		CreatedAT:     time.Now(),

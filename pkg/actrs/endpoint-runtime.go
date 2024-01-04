@@ -1,37 +1,49 @@
 package actrs
 
 import (
+	"bytes"
 	"context"
+	_ "embed"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
+	"strconv"
+	"time"
 
-	"github.com/anthdm/ffaas/pkg/storage"
-	"github.com/anthdm/ffaas/pkg/types"
-	"github.com/anthdm/ffaas/proto"
 	"github.com/anthdm/hollywood/actor"
+	"github.com/anthdm/run/pkg/spidermonkey"
+	"github.com/anthdm/run/pkg/storage"
+	"github.com/anthdm/run/pkg/types"
+	"github.com/anthdm/run/proto"
 	"github.com/google/uuid"
 	"github.com/stealthrocket/wasi-go"
 	"github.com/stealthrocket/wasi-go/imports"
 	"github.com/tetratelabs/wazero"
 	wapi "github.com/tetratelabs/wazero/api"
-	"github.com/vmihailenco/msgpack/v5"
+	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
+
+	prot "google.golang.org/protobuf/proto"
 )
 
 const KindEndpointRuntime = "endpoint_runtime"
 
 // EndpointRuntime is an actor that can execute compiled WASM blobs in a distributed cluster.
 type EndpointRuntime struct {
-	store storage.Store
-	cache storage.ModCacher
+	store       storage.Store
+	metricStore storage.MetricStore
+	cache       storage.ModCacher
+	started     time.Time
+	endpointID  uuid.UUID
 }
 
-func NewEndpointRuntime(store storage.Store, cache storage.ModCacher) actor.Producer {
+func NewEndpointRuntime(store storage.Store, metricStore storage.MetricStore, cache storage.ModCacher) actor.Producer {
 	return func() actor.Receiver {
 		return &EndpointRuntime{
-			store: store,
-			cache: cache,
+			store:       store,
+			metricStore: metricStore,
+			cache:       cache,
 		}
 	}
 }
@@ -39,49 +51,106 @@ func NewEndpointRuntime(store storage.Store, cache storage.ModCacher) actor.Prod
 func (r *EndpointRuntime) Receive(c *actor.Context) {
 	switch msg := c.Message().(type) {
 	case actor.Started:
+		r.started = time.Now()
 	case actor.Stopped:
 	case *proto.HTTPRequest:
-		e, err := r.store.GetApp(uuid.MustParse(msg.EndpointID))
+		r.endpointID = uuid.MustParse(msg.ActiveDeployID)
+		d, err := r.store.GetDeploy(r.endpointID)
 		if err != nil {
-			slog.Warn("runtime could not find endpoint from store", "err", err)
-			return
-		}
-
-		endpoint, ok := e.(*types.Endpoint)
-		if !ok {
-			slog.Warn(fmt.Sprintf("runtime could not cast endpoint type (%T)", e), "err", err)
-		}
-
-		d, err := r.store.GetDeploy(endpoint.ActiveDeployID)
-		if err != nil {
+			// NOTE: Make sure we always respond to the message with an HTTPResponse or the
+			// the request will never be completed.
 			slog.Warn("runtime could not find the endpoint's active deploy from store", "err", err)
+			c.Respond(&proto.HTTPResponse{
+				Response:   []byte("internal server error"),
+				StatusCode: http.StatusInternalServerError,
+				RequestID:  msg.ID,
+			})
 			return
 		}
 
-		deploy, ok := d.(*types.EndpointDeploy)
-		if !ok {
-			slog.Warn(fmt.Sprintf("runtime could not cast deploy type (%T)", d), "err", err)
+		deploy := d.(*types.EndpointDeploy)
+
+		switch msg.Runtime {
+		case "js":
+			buffer := &bytes.Buffer{}
+			r.invokeJSRuntime(context.TODO(), deploy.Blob, buffer, msg.Env)
+			// fmt.Println(buffer.String())
+			c.Respond(&proto.HTTPResponse{
+				Response:   buffer.Bytes(),
+				StatusCode: http.StatusOK,
+				RequestID:  msg.ID,
+			})
+			buffer = nil
+		case "go":
+			httpmod, _ := NewRequestModule(msg)
+			modcache, ok := r.cache.Get(deploy.EndpointID)
+			if !ok {
+				modcache = wazero.NewCompilationCache()
+				slog.Warn("no cache hit", "endpoint", deploy.EndpointID)
+			}
+			r.invokeGORuntime(context.TODO(), deploy.Blob, modcache, msg.Env, httpmod)
+			resp := &proto.HTTPResponse{
+				Response:   httpmod.responseBytes,
+				RequestID:  msg.ID,
+				StatusCode: http.StatusOK,
+			}
+			c.Respond(resp)
+		default:
+			slog.Warn("invalid runtime", "runtime", msg.Runtime)
+			c.Respond(&proto.HTTPResponse{
+				Response:   []byte("internal server error"),
+				StatusCode: http.StatusInternalServerError,
+				RequestID:  msg.ID,
+			})
 		}
 
-		httpmod, _ := NewEndpointRequestModule(msg)
-		modcache, ok := r.cache.Get(endpoint.ID)
-		if !ok {
-			modcache = wazero.NewCompilationCache()
-			slog.Warn("no cache hit", "endpoint", endpoint.ID)
-		}
-		r.exec(context.TODO(), deploy.Blob, modcache, endpoint.Environment, httpmod)
-		resp := &proto.HTTPResponse{
-			Response:   httpmod.responseBytes,
-			RequestID:  msg.ID,
-			StatusCode: http.StatusOK,
-		}
-		c.Respond(resp)
 		c.Engine().Poison(c.PID())
-		r.cache.Put(endpoint.ID, modcache)
+		metric := types.EndpointRuntimeMetric{
+			ID:         uuid.New(),
+			StartTime:  r.started,
+			Duration:   time.Since(r.started),
+			DeployID:   deploy.ID,
+			EndpointID: deploy.EndpointID,
+			RequestURL: msg.URL,
+		}
+		if err := r.metricStore.CreateMetric(&metric); err != nil {
+			slog.Warn("failed to create runtime metric", "err", err)
+		}
 	}
 }
 
-func (r *EndpointRuntime) exec(ctx context.Context, blob []byte, cache wazero.CompilationCache, env map[string]string, httpmod *EndpointRequestModule) {
+func (r *EndpointRuntime) invokeJSRuntime(ctx context.Context, blob []byte, buffer io.Writer, env map[string]string) {
+	modcache, ok := r.cache.Get(r.endpointID)
+	if !ok {
+		modcache = wazero.NewCompilationCache()
+		slog.Warn("no cache hit", "endpoint", r.endpointID)
+		r.cache.Put(r.endpointID, modcache)
+	}
+	config := wazero.NewRuntimeConfig().WithCompilationCache(modcache)
+	runtime := wazero.NewRuntimeWithConfig(ctx, config)
+	defer runtime.Close(ctx)
+
+	mod, err := runtime.CompileModule(ctx, spidermonkey.WasmBlob)
+	if err != nil {
+		panic(err)
+	}
+
+	wasi_snapshot_preview1.MustInstantiate(ctx, runtime)
+	modConfig := wazero.NewModuleConfig().
+		WithStdin(os.Stdin).
+		WithStdout(buffer).
+		WithArgs("", "-e", string(blob))
+	_, err = runtime.InstantiateModule(ctx, mod, modConfig)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (r *EndpointRuntime) invokeGORuntime(ctx context.Context,
+	blob []byte,
+	cache wazero.CompilationCache,
+	env map[string]string,
+	httpmod *EndpointRequestModule) {
 	config := wazero.NewRuntimeConfig().WithCompilationCache(cache)
 	runtime := wazero.NewRuntimeWithConfig(ctx, config)
 	defer runtime.Close(ctx)
@@ -91,10 +160,11 @@ func (r *EndpointRuntime) exec(ctx context.Context, blob []byte, cache wazero.Co
 		slog.Warn("compiling module failed", "err", err)
 		return
 	}
-	fd := -1
+	fd := -1 // TODO: for capturing logs..
+	requestLen := strconv.Itoa(len(httpmod.requestBytes))
 	builder := imports.NewBuilder().
-		WithName("ffaas").
-		WithArgs().
+		WithName("run").
+		WithArgs(requestLen).
 		WithStdio(fd, fd, fd).
 		WithEnv(envMapToSlice(env)...).
 		// TODO: we want to mount this to some virtual folder?
@@ -109,16 +179,16 @@ func (r *EndpointRuntime) exec(ctx context.Context, blob []byte, cache wazero.Co
 	var system wasi.System
 	ctx, system, err = builder.Instantiate(ctx, runtime)
 	if err != nil {
-		slog.Warn("failed to instanciate wasi module", "err", err)
+		slog.Warn("failed to instantiate wasi module", "err", err)
 		return
 	}
 	defer system.Close(ctx)
 
-	httpmod.Instanciate(ctx, runtime)
+	httpmod.Instantiate(ctx, runtime)
 
 	_, err = runtime.InstantiateModule(ctx, mod, wazero.NewModuleConfig())
 	if err != nil {
-		slog.Warn("failed to instanciate guest module", "err", err)
+		slog.Warn("failed to instantiate guest module", "err", err)
 	}
 }
 
@@ -138,8 +208,8 @@ type EndpointRequestModule struct {
 	responseBytes []byte
 }
 
-func NewEndpointRequestModule(req *proto.HTTPRequest) (*EndpointRequestModule, error) {
-	b, err := msgpack.Marshal(req)
+func NewRequestModule(req *proto.HTTPRequest) (*EndpointRequestModule, error) {
+	b, err := prot.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
@@ -152,11 +222,8 @@ func (r *EndpointRequestModule) WriteResponse(w io.Writer) (int, error) {
 	return w.Write(r.responseBytes)
 }
 
-func (r *EndpointRequestModule) Instanciate(ctx context.Context, runtime wazero.Runtime) error {
+func (r *EndpointRequestModule) Instantiate(ctx context.Context, runtime wazero.Runtime) error {
 	_, err := runtime.NewHostModuleBuilder("env").
-		NewFunctionBuilder().
-		WithGoModuleFunction(r.moduleMalloc(), []wapi.ValueType{}, []wapi.ValueType{wapi.ValueTypeI32}).
-		Export("malloc").
 		NewFunctionBuilder().
 		WithGoModuleFunction(r.moduleWriteRequest(), []wapi.ValueType{wapi.ValueTypeI32}, []wapi.ValueType{}).
 		Export("write_request").
@@ -171,13 +238,6 @@ func (r *EndpointRequestModule) Close(ctx context.Context) error {
 	r.responseBytes = nil
 	r.requestBytes = nil
 	return nil
-}
-
-func (r *EndpointRequestModule) moduleMalloc() wapi.GoModuleFunc {
-	return func(ctx context.Context, module wapi.Module, stack []uint64) {
-		size := uint64(len(r.requestBytes))
-		stack[0] = uint64(wapi.DecodeU32(size))
-	}
 }
 
 func (r *EndpointRequestModule) moduleWriteRequest() wapi.GoModuleFunc {

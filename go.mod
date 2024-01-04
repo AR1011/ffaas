@@ -1,4 +1,4 @@
-module github.com/anthdm/ffaas
+module github.com/anthdm/run
 
 go 1.21.0
 

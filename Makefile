@@ -17,17 +17,31 @@ proto:
 	protoc --go_out=. --go_opt=paths=source_relative --proto_path=. proto/types.proto
 
 clean:
-	@rm -rf bin/ffaas
+	@rm -rf bin/run
 	@rm -rf bin/wasmserver
 	@rm ./examples/*/*.wasm
 
 goex:
-	GOOS=wasip1 GOARCH=wasm go build -o examples/go-endpoint/endpoint.wasm examples/go-endpoint/main.go 
-	GOOS=wasip1 GOARCH=wasm go build -o examples/go-cron/cron.wasm examples/go-cron/main.go
-	GOOS=wasip1 GOARCH=wasm go build -o examples/go-process/process.wasm examples/go-process/main.go
+	GOOS=wasip1 GOARCH=wasm go build -o examples/go/endpoint/endpoint.wasm examples/go/endpoint/main.go 
+	GOOS=wasip1 GOARCH=wasm go build -o examples/go/cron/cron.wasm examples/go/cron/main.go
+	GOOS=wasip1 GOARCH=wasm go build -o examples/go/process/process.wasm examples/go/process/main.go
+
+jsex:
+	javy compile examples/js/index.js -o examples/js/index.wasm
 
 redis-up:
-	docker compose -f ./redis.yml up -d
+	docker compose -f ./docker/redis.yml up -d
 
 redis-down:
-	docker compose -f ./redis.yml down
+	docker compose -f ./docker/redis.yml down
+
+deploy-up:
+	docker compose -f ./docker/deploy.yml up -d
+
+deploy-down:
+	docker compose -f ./docker/deploy.yml down
+
+build-containers:
+	docker build -t api-server -f ./docker/api.Dockerfile .
+	docker build -t wasm-server -f ./docker/wasm.Dockerfile .
+	

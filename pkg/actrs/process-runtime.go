@@ -1,9 +1,9 @@
 package actrs
 
 import (
-	"github.com/anthdm/ffaas/pkg/storage"
-	"github.com/anthdm/ffaas/pkg/types"
 	"github.com/anthdm/hollywood/actor"
+	"github.com/anthdm/run/pkg/storage"
+	"github.com/anthdm/run/pkg/types"
 )
 
 const KindProcessRuntime = "process_runtime"

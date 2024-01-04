@@ -13,6 +13,7 @@ type Endpoint struct {
 	AppType        AppType           `json:"app_type"`
 	Name           string            `json:"name"`
 	URL            string            `json:"url"`
+	Runtime        string            `json:"runtime"`
 	ActiveDeployID uuid.UUID         `json:"active_deploy_id"`
 	Environment    map[string]string `json:"environment"`
 	DeployHistory  []*EndpointDeploy `json:"deploy_history"`
@@ -35,7 +36,7 @@ func (e Endpoint) GetAppType() AppType {
 	return AppTypeEndpoint
 }
 
-func NewEndpoint(name string, env map[string]string) *Endpoint {
+func NewEndpoint(name string, runtime string, env map[string]string) *Endpoint {
 	if env == nil {
 		env = make(map[string]string)
 	}
@@ -46,6 +47,7 @@ func NewEndpoint(name string, env map[string]string) *Endpoint {
 		Name:          name,
 		Environment:   env,
 		URL:           "",
+		Runtime:       runtime,
 		DeployHistory: []*EndpointDeploy{},
 		CreatedAT:     time.Now(),
 	}

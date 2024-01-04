@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 
-	ffaas "github.com/anthdm/ffaas/sdk"
+	run "github.com/anthdm/run/sdk"
 	"github.com/go-chi/chi"
 )
 
@@ -26,5 +26,5 @@ func main() {
 	router := chi.NewMux()
 	router.Get("/", handleHome)
 	router.Get("/login", handleLogin)
-	ffaas.Handle(router)
+	run.Handle(router)
 }

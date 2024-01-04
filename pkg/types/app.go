@@ -40,3 +40,13 @@ func ParseType(s string) AppType {
 		return ""
 	}
 }
+
+var Runtimes = map[string]bool{
+	"js": true,
+	"go": true,
+}
+
+func ValidRuntime(runtime string) bool {
+	_, ok := Runtimes[runtime]
+	return ok
+}

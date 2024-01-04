@@ -2,18 +2,20 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
-	"github.com/anthdm/ffaas/pkg/config"
-	"github.com/anthdm/ffaas/pkg/storage"
-	"github.com/anthdm/ffaas/pkg/types"
+	"github.com/anthdm/run/pkg/config"
+	"github.com/anthdm/run/pkg/storage"
+	"github.com/anthdm/run/pkg/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
-// Server serves the public ffaas API.
+// Server serves the public run API.
 type Server struct {
 	router      *chi.Mux
 	store       storage.Store
@@ -38,8 +40,10 @@ func (s *Server) Listen(addr string) error {
 
 func (s *Server) initRouter() {
 	s.router = chi.NewRouter()
+	if config.Get().Authorization {
+		s.router.Use(s.withAPIToken)
+	}
 	s.router.Get("/status", handleStatus)
-
 	s.router.Get("/application/{id}", makeAPIHandler(s.handleGetApplication))
 	s.router.Get("/application/{id}/metrics", makeAPIHandler(s.handleGetEndpointMetrics))
 	s.router.Post("/application", makeAPIHandler(s.handleCreateApplication))
@@ -56,64 +60,41 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(status)
 }
 
-// CreateApplicationParams holds all the necessary fields to create a new ffaas application.
-type CreateApplicationParams struct {
-	Name        string            `json:"name"`
-	Type        string            `json:"type"`
-	Interval    int64             `json:"interval,omitempty"`
-	Environment map[string]string `json:"environment"`
-}
-
-func (p CreateApplicationParams) validate() error {
-	minlen, maxlen := 3, 50
-	if len(p.Name) < minlen {
-		return fmt.Errorf("application name should be at least %d characters long", minlen)
-	}
-	if len(p.Name) > maxlen {
-		return fmt.Errorf("application name can be maximum %d characters long", maxlen)
-	}
-	ok := types.IsValidAppType(p.Type)
-	if !ok {
-		return fmt.Errorf("invalid application type (%s)", p.Type)
-	}
-
-	if !types.IsValidAppType(p.Type) {
-		return fmt.Errorf("invalid application type (%s)", p.Type)
-	}
-
-	return nil
-}
-
 func (s *Server) handleCreateApplication(w http.ResponseWriter, r *http.Request) error {
-	var params CreateApplicationParams
-	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
-		return writeJSON(w, http.StatusBadRequest, ErrorResponse(ErrDecodeRequestBody))
-	}
-	defer r.Body.Close()
+	var (
+		params CreateParams
+		body   []byte
+		err    error
+	)
 
-	if err := params.validate(); err != nil {
+	body, err = io.ReadAll(r.Body)
+	if err != nil {
 		return writeJSON(w, http.StatusBadRequest, ErrorResponse(err))
 	}
 
-	var app types.App
-	fmt.Println(params.Type)
+	params, err = DecodeParams(body)
 
-	switch types.ParseType(params.Type) {
+	var app types.App
+
+	switch params.getType() {
 	case types.AppTypeEndpoint:
-		endpoint := types.NewEndpoint(params.Name, params.Environment)
+		params := params.(CreateEndpointParams)
+		endpoint := types.NewEndpoint(params.Name, params.Runtime, params.Environment)
 		endpoint.URL = config.GetWasmUrl() + "/" + endpoint.ID.String()
 		app = endpoint
 
 	case types.AppTypeCron:
-		cron := types.NewCron(params.Name, params.Interval, params.Environment)
+		params := params.(CreateCronParams)
+		cron := types.NewCron(params.Name, params.Runtime, params.Interval, params.Environment)
 		app = cron
 
 	case types.AppTypeProcess:
-		process := types.NewProcess(params.Name, params.Environment)
+		params := params.(CreateProcessparams)
+		process := types.NewProcess(params.Name, params.Runtime, params.Environment)
 		app = process
 
 	default:
-		return writeJSON(w, http.StatusBadRequest, ErrorResponse(fmt.Errorf("invalid application type (%T)", params.Type)))
+		return writeJSON(w, http.StatusBadRequest, ErrorResponse(fmt.Errorf("invalid application type (%T)", params.getType())))
 	}
 
 	if err := s.store.CreateApp(app); err != nil {
@@ -286,4 +267,22 @@ func (s *Server) handleGetEndpointMetrics(w http.ResponseWriter, r *http.Request
 		return writeJSON(w, http.StatusNotFound, ErrorResponse(err))
 	}
 	return writeJSON(w, http.StatusOK, metrics)
+}
+
+var errUnauthorized = errors.New("unauthorized")
+
+func (s *Server) withAPIToken(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if len(authHeader) < 10 {
+			writeJSON(w, http.StatusUnauthorized, ErrorResponse(errUnauthorized))
+			return
+		}
+		apiToken := strings.TrimPrefix(authHeader, "Bearer ")
+		if apiToken != config.Get().APIToken {
+			writeJSON(w, http.StatusUnauthorized, ErrorResponse(errUnauthorized))
+			return
+		}
+		h.ServeHTTP(w, r)
+	})
 }

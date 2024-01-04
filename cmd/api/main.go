@@ -8,10 +8,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/anthdm/ffaas/pkg/api"
-	"github.com/anthdm/ffaas/pkg/config"
-	"github.com/anthdm/ffaas/pkg/storage"
-	"github.com/anthdm/ffaas/pkg/types"
+	"github.com/anthdm/run/pkg/api"
+	"github.com/anthdm/run/pkg/config"
+	"github.com/anthdm/run/pkg/storage"
+	"github.com/anthdm/run/pkg/types"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/tetratelabs/wazero"
@@ -24,7 +24,7 @@ func main() {
 		configFile  string
 		seed        bool
 	)
-	flagSet := flag.NewFlagSet("ffaas", flag.ExitOnError)
+	flagSet := flag.NewFlagSet("run", flag.ExitOnError)
 	flagSet.StringVar(&configFile, "config", "config.toml", "")
 	flagSet.BoolVar(&seed, "seed", false, "")
 	flagSet.Parse(os.Args[1:])
@@ -34,7 +34,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	store, err := storage.NewRedisStore(&redis.Options{})
+	store, err := storage.NewRedisStore(&redis.Options{
+		Addr: config.Get().StorageDriver,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}

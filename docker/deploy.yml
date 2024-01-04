@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  api-server:
+    image: api-server:latest
+    container_name: api-server
+    hostname: api-server
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: unless-stopped
+
+  wasm-server:
+    image: wasm-server:latest
+    container_name: wasm-server
+    hostname: wasm-server
+    ports:
+      - "127.0.0.1:5000:5000"
+    restart: unless-stopped
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    hostname: redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - ./tmp/redis-data:/data
+    restart: unless-stopped
+
+  # Create redisinsight container
+  # expose default redisinsight port 8001
+  # This provides a web ui to view redis data
+  # http://localhost:8001
+  redisinsight:
+    image: redislabs/redisinsight:latest
+    container_name: redisinsight
+    hostname: redisinsight
+    ports:
+      - "127.0.0.1:8001:8001"
+    restart: unless-stopped

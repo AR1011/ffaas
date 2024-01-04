@@ -12,6 +12,7 @@ type Cron struct {
 	ID             uuid.UUID         `json:"id"`
 	AppType        AppType           `json:"app_type"`
 	Name           string            `json:"name"`
+	Runtime        string            `json:"runtime"`
 	ActiveDeployID uuid.UUID         `json:"active_deploy_id"`
 	Environment    map[string]string `json:"environment"`
 	DeployHistory  []*CronDeploy     `json:"deploy_history"`
@@ -35,7 +36,7 @@ func (c Cron) GetID() uuid.UUID {
 	return c.ID
 }
 
-func NewCron(name string, interval int64, env map[string]string) *Cron {
+func NewCron(name string, runtime string, interval int64, env map[string]string) *Cron {
 	if env == nil {
 		env = make(map[string]string)
 	}
@@ -44,6 +45,7 @@ func NewCron(name string, interval int64, env map[string]string) *Cron {
 		ID:            id,
 		AppType:       AppTypeCron,
 		Name:          name,
+		Runtime:       runtime,
 		Environment:   env,
 		DeployHistory: []*CronDeploy{},
 		CreatedAT:     time.Now(),
