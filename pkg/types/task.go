@@ -8,95 +8,95 @@ import (
 	"github.com/google/uuid"
 )
 
-type Cron struct {
+type Task struct {
 	ID             uuid.UUID         `json:"id"`
 	AppType        AppType           `json:"app_type"`
 	Name           string            `json:"name"`
 	Runtime        string            `json:"runtime"`
 	ActiveDeployID uuid.UUID         `json:"active_deploy_id"`
 	Environment    map[string]string `json:"environment"`
-	DeployHistory  []*CronDeploy     `json:"deploy_history"`
+	DeployHistory  []*TaskDeploy     `json:"deploy_history"`
 	CreatedAT      time.Time         `json:"created_at"`
 	Interval       int64             `json:"interval"` // interval in seconds
 }
 
-func (c Cron) HasActiveDeploy() bool {
+func (c Task) HasActiveDeploy() bool {
 	return c.ActiveDeployID.String() != "00000000-0000-0000-0000-000000000000"
 }
 
-func (c Cron) GetActiveDeployID() uuid.UUID {
+func (c Task) GetActiveDeployID() uuid.UUID {
 	return c.ActiveDeployID
 }
 
-func (c Cron) GetAppType() AppType {
-	return AppTypeCron
+func (c Task) GetAppType() AppType {
+	return AppTypeTask
 }
 
-func (c Cron) GetID() uuid.UUID {
+func (c Task) GetID() uuid.UUID {
 	return c.ID
 }
 
-func NewCron(name string, runtime string, interval int64, env map[string]string) *Cron {
+func NewTask(name string, runtime string, interval int64, env map[string]string) *Task {
 	if env == nil {
 		env = make(map[string]string)
 	}
 	id := uuid.New()
-	return &Cron{
+	return &Task{
 		ID:            id,
-		AppType:       AppTypeCron,
+		AppType:       AppTypeTask,
 		Name:          name,
 		Runtime:       runtime,
 		Environment:   env,
-		DeployHistory: []*CronDeploy{},
+		DeployHistory: []*TaskDeploy{},
 		CreatedAT:     time.Now(),
 		Interval:      interval,
 	}
 }
 
-type CronUpdateParams struct {
+type TaskUpdateParams struct {
 	Environment    map[string]string
 	ActiveDeployID uuid.UUID
-	Deploys        []*CronDeploy
+	Deploys        []*TaskDeploy
 	Interval       int64 // interval in seconds
 }
 
-type CronDeploy struct {
+type TaskDeploy struct {
 	ID         uuid.UUID `json:"id"`
-	CronID     uuid.UUID `json:"cron_id"`
+	TaskID     uuid.UUID `json:"task_id"`
 	DeployType AppType   `json:"deploy_type"`
 	Hash       string    `json:"hash"`
 	Blob       []byte    `json:"-"`
 	CreatedAT  time.Time `json:"created_at"`
 }
 
-func NewCronDeploy(cron *Cron, blob []byte) *CronDeploy {
+func NewTaskDeploy(task *Task, blob []byte) *TaskDeploy {
 	hashBytes := md5.Sum(blob)
 	hashstr := hex.EncodeToString(hashBytes[:])
 	deployID := uuid.New()
-	return &CronDeploy{
+	return &TaskDeploy{
 		ID:         deployID,
-		CronID:     cron.ID,
-		DeployType: AppTypeCron,
+		TaskID:     task.ID,
+		DeployType: AppTypeTask,
 		Blob:       blob,
 		Hash:       hashstr,
 		CreatedAT:  time.Now(),
 	}
 }
 
-func (c CronDeploy) GetID() uuid.UUID {
+func (c TaskDeploy) GetID() uuid.UUID {
 	return c.ID
 }
 
-func (c CronDeploy) GetParentID() uuid.UUID {
-	return c.CronID
+func (c TaskDeploy) GetParentID() uuid.UUID {
+	return c.TaskID
 }
 
-func (c CronDeploy) GetDeployType() AppType {
-	return AppTypeCron
+func (c TaskDeploy) GetDeployType() AppType {
+	return AppTypeTask
 }
 
 // ensure implements
 var (
-	_ App    = &Cron{}
-	_ Deploy = &CronDeploy{}
+	_ App    = &Task{}
+	_ Deploy = &TaskDeploy{}
 )

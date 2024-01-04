@@ -241,7 +241,7 @@ func (x *HTTPResponse) GetRequestID() string {
 	return ""
 }
 
-type StartCronJob struct {
+type StartTask struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -249,8 +249,8 @@ type StartCronJob struct {
 	ID string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
 }
 
-func (x *StartCronJob) Reset() {
-	*x = StartCronJob{}
+func (x *StartTask) Reset() {
+	*x = StartTask{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_types_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -258,13 +258,13 @@ func (x *StartCronJob) Reset() {
 	}
 }
 
-func (x *StartCronJob) String() string {
+func (x *StartTask) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*StartCronJob) ProtoMessage() {}
+func (*StartTask) ProtoMessage() {}
 
-func (x *StartCronJob) ProtoReflect() protoreflect.Message {
+func (x *StartTask) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_types_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -276,19 +276,19 @@ func (x *StartCronJob) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use StartCronJob.ProtoReflect.Descriptor instead.
-func (*StartCronJob) Descriptor() ([]byte, []int) {
+// Deprecated: Use StartTask.ProtoReflect.Descriptor instead.
+func (*StartTask) Descriptor() ([]byte, []int) {
 	return file_proto_types_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *StartCronJob) GetID() string {
+func (x *StartTask) GetID() string {
 	if x != nil {
 		return x.ID
 	}
 	return ""
 }
 
-type StopCronJob struct {
+type StopTask struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -296,8 +296,8 @@ type StopCronJob struct {
 	ID string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
 }
 
-func (x *StopCronJob) Reset() {
-	*x = StopCronJob{}
+func (x *StopTask) Reset() {
+	*x = StopTask{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_types_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -305,13 +305,13 @@ func (x *StopCronJob) Reset() {
 	}
 }
 
-func (x *StopCronJob) String() string {
+func (x *StopTask) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*StopCronJob) ProtoMessage() {}
+func (*StopTask) ProtoMessage() {}
 
-func (x *StopCronJob) ProtoReflect() protoreflect.Message {
+func (x *StopTask) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_types_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -323,12 +323,12 @@ func (x *StopCronJob) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use StopCronJob.ProtoReflect.Descriptor instead.
-func (*StopCronJob) Descriptor() ([]byte, []int) {
+// Deprecated: Use StopTask.ProtoReflect.Descriptor instead.
+func (*StopTask) Descriptor() ([]byte, []int) {
 	return file_proto_types_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *StopCronJob) GetID() string {
+func (x *StopTask) GetID() string {
 	if x != nil {
 		return x.ID
 	}
@@ -375,14 +375,13 @@ var file_proto_types_proto_rawDesc = []byte{
 	0x0a, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x43, 0x6f, 0x64, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28,
 	0x05, 0x52, 0x0a, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x43, 0x6f, 0x64, 0x65, 0x12, 0x1c, 0x0a,
 	0x09, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x44, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x09, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x44, 0x22, 0x1e, 0x0a, 0x0c, 0x53,
-	0x74, 0x61, 0x72, 0x74, 0x43, 0x72, 0x6f, 0x6e, 0x4a, 0x6f, 0x62, 0x12, 0x0e, 0x0a, 0x02, 0x49,
-	0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x49, 0x44, 0x22, 0x1d, 0x0a, 0x0b, 0x53,
-	0x74, 0x6f, 0x70, 0x43, 0x72, 0x6f, 0x6e, 0x4a, 0x6f, 0x62, 0x12, 0x0e, 0x0a, 0x02, 0x49, 0x44,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x49, 0x44, 0x42, 0x1d, 0x5a, 0x1b, 0x67, 0x69,
-	0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x61, 0x6e, 0x74, 0x68, 0x64, 0x6d, 0x2f,
-	0x72, 0x75, 0x6e, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x33,
+	0x52, 0x09, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x44, 0x22, 0x1b, 0x0a, 0x09, 0x53,
+	0x74, 0x61, 0x72, 0x74, 0x54, 0x61, 0x73, 0x6b, 0x12, 0x0e, 0x0a, 0x02, 0x49, 0x44, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x49, 0x44, 0x22, 0x1a, 0x0a, 0x08, 0x53, 0x74, 0x6f, 0x70,
+	0x54, 0x61, 0x73, 0x6b, 0x12, 0x0e, 0x0a, 0x02, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x02, 0x49, 0x44, 0x42, 0x1d, 0x5a, 0x1b, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63,
+	0x6f, 0x6d, 0x2f, 0x61, 0x6e, 0x74, 0x68, 0x64, 0x6d, 0x2f, 0x72, 0x75, 0x6e, 0x2f, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -402,8 +401,8 @@ var file_proto_types_proto_goTypes = []interface{}{
 	(*HTTPRequest)(nil),  // 0: proto.HTTPRequest
 	(*HeaderFields)(nil), // 1: proto.HeaderFields
 	(*HTTPResponse)(nil), // 2: proto.HTTPResponse
-	(*StartCronJob)(nil), // 3: proto.StartCronJob
-	(*StopCronJob)(nil),  // 4: proto.StopCronJob
+	(*StartTask)(nil),    // 3: proto.StartTask
+	(*StopTask)(nil),     // 4: proto.StopTask
 	nil,                  // 5: proto.HTTPRequest.HeaderEntry
 	nil,                  // 6: proto.HTTPRequest.EnvEntry
 }
@@ -461,7 +460,7 @@ func file_proto_types_proto_init() {
 			}
 		}
 		file_proto_types_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StartCronJob); i {
+			switch v := v.(*StartTask); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -473,7 +472,7 @@ func file_proto_types_proto_init() {
 			}
 		}
 		file_proto_types_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StopCronJob); i {
+			switch v := v.(*StopTask); i {
 			case 0:
 				return &v.state
 			case 1:

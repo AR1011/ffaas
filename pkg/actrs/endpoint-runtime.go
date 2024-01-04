@@ -74,7 +74,6 @@ func (r *EndpointRuntime) Receive(c *actor.Context) {
 		case "js":
 			buffer := &bytes.Buffer{}
 			r.invokeJSRuntime(context.TODO(), deploy.Blob, buffer, msg.Env)
-			// fmt.Println(buffer.String())
 			c.Respond(&proto.HTTPResponse{
 				Response:   buffer.Bytes(),
 				StatusCode: http.StatusOK,
@@ -113,7 +112,7 @@ func (r *EndpointRuntime) Receive(c *actor.Context) {
 			EndpointID: deploy.EndpointID,
 			RequestURL: msg.URL,
 		}
-		if err := r.metricStore.CreateMetric(&metric); err != nil {
+		if err := r.metricStore.CreateRuntimeMetric(&metric); err != nil {
 			slog.Warn("failed to create runtime metric", "err", err)
 		}
 	}
@@ -254,4 +253,13 @@ func (r *EndpointRequestModule) moduleWriteResponse() wapi.GoModuleFunc {
 		resp, _ := module.Memory().Read(offset, size)
 		r.responseBytes = resp
 	}
+}
+
+func ParseResponse(b []byte) (*proto.HTTPResponse, error) {
+	resp := &proto.HTTPResponse{}
+	err := prot.Unmarshal(b, resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }

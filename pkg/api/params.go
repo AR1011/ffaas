@@ -68,7 +68,7 @@ func (p CreateProcessparams) validate() error {
 	return nil
 }
 
-type CreateCronParams struct {
+type CreateTaskParams struct {
 	Name        string            `json:"name"`
 	Type        string            `json:"type"`
 	Runtime     string            `json:"runtime"`
@@ -76,11 +76,11 @@ type CreateCronParams struct {
 	Environment map[string]string `json:"environment"`
 }
 
-func (p CreateCronParams) getType() types.AppType {
-	return types.AppTypeCron
+func (p CreateTaskParams) getType() types.AppType {
+	return types.AppTypeTask
 }
 
-func (p CreateCronParams) validate() error {
+func (p CreateTaskParams) validate() error {
 	minlen, maxlen := 3, 50
 	if len(p.Name) < minlen {
 		return fmt.Errorf("endpoint name should be at least %d characters long", minlen)
@@ -103,7 +103,7 @@ func (p CreateCronParams) validate() error {
 var (
 	_ CreateParams = CreateEndpointParams{}
 	_ CreateParams = CreateProcessparams{}
-	_ CreateParams = CreateCronParams{}
+	_ CreateParams = CreateTaskParams{}
 )
 
 func DecodeParams(body []byte) (CreateParams, error) {
@@ -128,8 +128,8 @@ func DecodeParams(body []byte) (CreateParams, error) {
 		err = json.Unmarshal(body, &params)
 		p = params
 
-	case types.AppTypeCron:
-		var params CreateCronParams
+	case types.AppTypeTask:
+		var params CreateTaskParams
 		err = json.Unmarshal(body, &params)
 		p = params
 

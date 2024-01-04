@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/anthdm/run/pkg/api"
+	"github.com/anthdm/run/pkg/config"
 	"github.com/anthdm/run/pkg/types"
 	"github.com/google/uuid"
 )
@@ -18,7 +19,7 @@ type Config struct {
 
 func NewConfig() Config {
 	return Config{
-		url: "http://localhost:3000",
+		url: "http://" + config.Get().APIServerAddr,
 	}
 }
 

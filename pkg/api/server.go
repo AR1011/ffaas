@@ -73,6 +73,9 @@ func (s *Server) handleCreateApplication(w http.ResponseWriter, r *http.Request)
 	}
 
 	params, err = DecodeParams(body)
+	if err != nil {
+		return writeJSON(w, http.StatusBadRequest, ErrorResponse(err))
+	}
 
 	var app types.App
 
@@ -83,10 +86,10 @@ func (s *Server) handleCreateApplication(w http.ResponseWriter, r *http.Request)
 		endpoint.URL = config.GetWasmUrl() + "/" + endpoint.ID.String()
 		app = endpoint
 
-	case types.AppTypeCron:
-		params := params.(CreateCronParams)
-		cron := types.NewCron(params.Name, params.Runtime, params.Interval, params.Environment)
-		app = cron
+	case types.AppTypeTask:
+		params := params.(CreateTaskParams)
+		task := types.NewTask(params.Name, params.Runtime, params.Interval, params.Environment)
+		app = task
 
 	case types.AppTypeProcess:
 		params := params.(CreateProcessparams)
@@ -124,8 +127,8 @@ func (s *Server) handleCreateDeploy(w http.ResponseWriter, r *http.Request) erro
 	switch a := app.(type) {
 	case *types.Endpoint:
 		return s.handleCreateEndpointDeploy(w, r, a, b)
-	case *types.Cron:
-		return s.handleCreateCronDeploy(w, r, a, b)
+	case *types.Task:
+		return s.handleCreateTaskDeploy(w, r, a, b)
 	case *types.Process:
 		return s.handleCreateProcessDeploy(w, r, a, b)
 	default:
@@ -150,23 +153,23 @@ func (s *Server) handleCreateEndpointDeploy(w http.ResponseWriter, r *http.Reque
 	return writeJSON(w, http.StatusOK, deploy)
 }
 
-func (s *Server) handleCreateCronDeploy(w http.ResponseWriter, r *http.Request, cron *types.Cron, b []byte) error {
-	deploy := types.NewCronDeploy(cron, b)
+func (s *Server) handleCreateTaskDeploy(w http.ResponseWriter, r *http.Request, task *types.Task, b []byte) error {
+	deploy := types.NewTaskDeploy(task, b)
 	if err := s.store.CreateDeploy(deploy); err != nil {
 		return writeJSON(w, http.StatusUnprocessableEntity, ErrorResponse(err))
 	}
 
-	// Each new deploy will be the cron's active deploy
-	err := s.store.UpdateApp(cron.ID, types.CronUpdateParams{
+	// Each new deploy will be the task's active deploy
+	err := s.store.UpdateApp(task.ID, types.TaskUpdateParams{
 		ActiveDeployID: deploy.ID,
-		Deploys:        []*types.CronDeploy{deploy},
+		Deploys:        []*types.TaskDeploy{deploy},
 	})
 
 	if err != nil {
 		return writeJSON(w, http.StatusUnprocessableEntity, ErrorResponse(err))
 	}
 
-	// todo start cron
+	// todo start task
 	return writeJSON(w, http.StatusOK, deploy)
 }
 
@@ -208,6 +211,10 @@ type CreateRollbackParams struct {
 	DeployID uuid.UUID `json:"deploy_id"`
 }
 
+type CreateRollbackResponse struct {
+	DeployID uuid.UUID `json:"deploy_id"`
+}
+
 func (s *Server) handleCreateRollback(w http.ResponseWriter, r *http.Request) error {
 	appID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
@@ -236,8 +243,8 @@ func (s *Server) handleCreateRollback(w http.ResponseWriter, r *http.Request) er
 		updateParams = &types.EndpointUpdateParams{
 			ActiveDeployID: d.ID,
 		}
-	case *types.CronDeploy:
-		updateParams = &types.CronUpdateParams{
+	case *types.TaskDeploy:
+		updateParams = &types.TaskUpdateParams{
 			ActiveDeployID: d.ID,
 		}
 	case *types.ProcessDeploy:
@@ -254,7 +261,11 @@ func (s *Server) handleCreateRollback(w http.ResponseWriter, r *http.Request) er
 
 	s.cache.Delete(currentDeployID)
 
-	return writeJSON(w, http.StatusOK, deploy)
+	resp := CreateRollbackResponse{
+		DeployID: deploy.GetID(),
+	}
+
+	return writeJSON(w, http.StatusOK, resp)
 }
 
 func (s *Server) handleGetEndpointMetrics(w http.ResponseWriter, r *http.Request) error {
@@ -262,7 +273,7 @@ func (s *Server) handleGetEndpointMetrics(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		return writeJSON(w, http.StatusBadRequest, ErrorResponse(err))
 	}
-	metrics, err := s.metricStore.GetMetrics(endpointID)
+	metrics, err := s.metricStore.GetRuntimeMetrics(endpointID)
 	if err != nil {
 		return writeJSON(w, http.StatusNotFound, ErrorResponse(err))
 	}

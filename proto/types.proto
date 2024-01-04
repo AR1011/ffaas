@@ -24,10 +24,10 @@ message HTTPResponse {
 	string RequestID = 3;
 }
 
-message StartCronJob {
+message StartTask {
 	string ID = 1;
 }
 
-message StopCronJob {
+message StopTask {
 	string ID = 1;
 }

@@ -23,7 +23,7 @@ clean:
 
 goex:
 	GOOS=wasip1 GOARCH=wasm go build -o examples/go/endpoint/endpoint.wasm examples/go/endpoint/main.go 
-	GOOS=wasip1 GOARCH=wasm go build -o examples/go/cron/cron.wasm examples/go/cron/main.go
+	GOOS=wasip1 GOARCH=wasm go build -o examples/go/task/task.wasm examples/go/task/main.go
 	GOOS=wasip1 GOARCH=wasm go build -o examples/go/process/process.wasm examples/go/process/main.go
 
 jsex:

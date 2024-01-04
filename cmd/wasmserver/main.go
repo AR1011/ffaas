@@ -51,8 +51,8 @@ func main() {
 		ID:              "member1",
 		ClusterProvider: cluster.NewSelfManagedProvider(),
 	})
-	c.RegisterKind(actrs.KindEndpointRuntime, actrs.NewEndpointRuntime(store, modCache), &cluster.KindConfig{})
-	c.RegisterKind(actrs.KindCronRuntime, actrs.NewCronRuntime(store, modCache), &cluster.KindConfig{})
+	c.RegisterKind(actrs.KindEndpointRuntime, actrs.NewEndpointRuntime(store, metricStore, modCache), &cluster.KindConfig{})
+	c.RegisterKind(actrs.KindTaskRuntime, actrs.NewTaskRuntime(store, modCache), &cluster.KindConfig{})
 	c.Start()
 
 	server := actrs.NewWasmServer(config.Get().WASMServerAddr, c, store, metricStore, modCache)

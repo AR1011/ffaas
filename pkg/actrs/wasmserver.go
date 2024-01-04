@@ -29,7 +29,7 @@ func newRequestWithResponse(request *proto.HTTPRequest) requestWithResponse {
 	}
 }
 
-type startCronRequest struct {
+type startTaskRequest struct {
 	ID uuid.UUID
 }
 
@@ -74,8 +74,8 @@ func (s *WasmServer) Receive(c *actor.Context) {
 		s.responses[msg.request.ID] = msg.response
 		s.sendEndpointRequestToRuntime(msg.request)
 
-	case startCronRequest:
-		s.sendCronStartRequestToRuntime(msg.ID)
+	case startTaskRequest:
+		s.sendTaskStartRequestToRuntime(msg.ID)
 
 	case *proto.HTTPResponse:
 		if resp, ok := s.responses[msg.RequestID]; ok {
@@ -98,17 +98,17 @@ func (s *WasmServer) sendEndpointRequestToRuntime(req *proto.HTTPRequest) {
 	s.cluster.Engine().SendWithSender(pid, req, s.self)
 }
 
-func (s *WasmServer) sendCronStartRequestToRuntime(id uuid.UUID) {
-	pid := s.cluster.Activate(KindCronRuntime, &cluster.ActivationConfig{})
-	s.cluster.Engine().SendWithSender(pid, &proto.StartCronJob{ID: id.String()}, s.self)
+func (s *WasmServer) sendTaskStartRequestToRuntime(id uuid.UUID) {
+	pid := s.cluster.Activate(KindTaskRuntime, &cluster.ActivationConfig{})
+	s.cluster.Engine().SendWithSender(pid, &proto.StartTask{ID: id.String()}, s.self)
 }
 
-func (s *WasmServer) sendCronStopRequestToRuntime(id uuid.UUID) {
-	pid := s.cluster.Activate(KindCronRuntime, &cluster.ActivationConfig{})
-	s.cluster.Engine().SendWithSender(pid, &proto.StopCronJob{ID: id.String()}, s.self)
+func (s *WasmServer) sendTaskStopRequestToRuntime(id uuid.UUID) {
+	pid := s.cluster.Activate(KindTaskRuntime, &cluster.ActivationConfig{})
+	s.cluster.Engine().SendWithSender(pid, &proto.StopTask{ID: id.String()}, s.self)
 }
 
-// TODO handle stop and start cron and processes
+// TODO handle stop and start task and processes
 func (s *WasmServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/")
 	pathParts := strings.Split(path, "/")
@@ -169,15 +169,15 @@ func makeEndpointProtoRequest(r *http.Request) (*proto.HTTPRequest, error) {
 	}, nil
 }
 
-func makeStartCronProtoRequest(cron *types.Cron) *proto.StartCronJob {
-	return &proto.StartCronJob{
-		ID: cron.ID.String(),
+func makeStartTaskProtoRequest(task *types.Task) *proto.StartTask {
+	return &proto.StartTask{
+		ID: task.ID.String(),
 	}
 }
 
-func makeStopCronProtoRequest(cron *types.Cron) *proto.StopCronJob {
-	return &proto.StopCronJob{
-		ID: cron.ID.String(),
+func makeStopTaskProtoRequest(task *types.Task) *proto.StopTask {
+	return &proto.StopTask{
+		ID: task.ID.String(),
 	}
 }
 

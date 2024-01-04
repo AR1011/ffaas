@@ -1,4 +1,4 @@
-// GOOS=wasip1 GOARCH=wasm go build -o examples/go-cron/cron.wasm examples/go-cron/main.go
+// GOOS=wasip1 GOARCH=wasm go build -o examples/go/task/task.wasm examples/go/task/main.go
 package main
 
 import (
@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	// example of a cron job
+	// example of a task
 
 	// do some work
 	time.Sleep(10 * time.Second)

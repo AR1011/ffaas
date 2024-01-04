@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/anthdm/run/pkg/types"
 	"github.com/google/uuid"
@@ -53,12 +54,12 @@ func (s *RedisStore) UpdateApp(id uuid.UUID, params types.AppUpdateParams) error
 		}
 		return s.updateEndpoint(endpoint, p)
 
-	case types.CronUpdateParams:
-		cron, ok := app.(*types.Cron)
+	case types.TaskUpdateParams:
+		task, ok := app.(*types.Task)
 		if !ok {
-			return fmt.Errorf("invalid params for app type %T. Want: %T  Got: %T", app, &types.CronUpdateParams{}, p)
+			return fmt.Errorf("invalid params for app type %T. Want: %T  Got: %T", app, &types.TaskUpdateParams{}, p)
 		}
-		return s.updateCron(cron, p)
+		return s.updateTask(task, p)
 
 	case types.ProcessUpdateParams:
 		process, ok := app.(*types.Process)
@@ -117,7 +118,7 @@ func (s *RedisStore) updateProcess(p *types.Process, params types.ProcessUpdateP
 	return s.client.Set(context.Background(), p.ID.String(), b, 0).Err()
 }
 
-func (s *RedisStore) updateCron(c *types.Cron, params types.CronUpdateParams) error {
+func (s *RedisStore) updateTask(c *types.Task, params types.TaskUpdateParams) error {
 	if params.ActiveDeployID.String() != "00000000-0000-0000-0000-000000000000" {
 		c.ActiveDeployID = params.ActiveDeployID
 	}
@@ -166,10 +167,10 @@ func (s *RedisStore) GetApp(id uuid.UUID) (types.App, error) {
 		endpoint := &types.Endpoint{}
 		err = msgpack.Unmarshal(b, endpoint)
 		return endpoint, err
-	case types.AppTypeCron:
-		cron := &types.Cron{}
-		err = msgpack.Unmarshal(b, cron)
-		return cron, err
+	case types.AppTypeTask:
+		task := &types.Task{}
+		err = msgpack.Unmarshal(b, task)
+		return task, err
 	case types.AppTypeProcess:
 		process := &types.Process{}
 		err = msgpack.Unmarshal(b, process)
@@ -178,6 +179,24 @@ func (s *RedisStore) GetApp(id uuid.UUID) (types.App, error) {
 	default:
 		return nil, fmt.Errorf("unknown app type (%s)", app.AppType)
 	}
+}
+
+func (s *RedisStore) GetApps() ([]types.App, error) {
+	keys, err := s.client.Keys(context.Background(), "*").Result()
+	if err != nil {
+		return nil, err
+	}
+
+	apps := make([]types.App, len(keys))
+	for i, key := range keys {
+		app, err := s.GetApp(uuid.MustParse(key))
+		if err != nil {
+			return nil, err
+		}
+		apps[i] = app
+	}
+
+	return apps, nil
 }
 
 func (s *RedisStore) CreateDeploy(deploy types.Deploy) error {
@@ -210,10 +229,10 @@ func (s *RedisStore) GetDeploy(id uuid.UUID) (types.Deploy, error) {
 		err = msgpack.Unmarshal(b, endpointDeploy)
 		return endpointDeploy, err
 
-	case types.AppTypeCron:
-		cronDeploy := &types.CronDeploy{}
-		err = msgpack.Unmarshal(b, cronDeploy)
-		return cronDeploy, err
+	case types.AppTypeTask:
+		taskDeploy := &types.TaskDeploy{}
+		err = msgpack.Unmarshal(b, taskDeploy)
+		return taskDeploy, err
 
 	case types.AppTypeProcess:
 		processDeploy := &types.ProcessDeploy{}
@@ -223,6 +242,51 @@ func (s *RedisStore) GetDeploy(id uuid.UUID) (types.Deploy, error) {
 	default:
 		return nil, fmt.Errorf("unknown deploy type (%s)", deploy.DeployType)
 	}
+}
+
+func (s *RedisStore) CreateRuntimeMetric(metric types.RuntimeMetric) error {
+	b, err := msgpack.Marshal(metric)
+	if err != nil {
+		return err
+	}
+	return s.client.Set(context.Background(), metric.GetID().String(), b, 0).Err()
+}
+
+func (s *RedisStore) GetRuntimeMetrics() ([]types.RuntimeMetric, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	keys, err := s.client.Keys(ctx, "*").Result()
+	if err != nil {
+		return nil, err
+	}
+
+	pipeline := s.client.Pipeline()
+	for _, key := range keys {
+		pipeline.Get(ctx, key)
+	}
+
+	cmds, err := pipeline.Exec(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	metrics := make([]types.RuntimeMetric, len(cmds))
+
+	for i, cmd := range cmds {
+		b, err := cmd.(*redis.StringCmd).Bytes()
+		if err != nil {
+			continue
+		}
+		m, err := types.DecodeMsgpackRuntimeMetric(b)
+		if err != nil {
+			continue
+		}
+		metrics[i] = m
+	}
+
+	return metrics, nil
+
 }
 
 // ensure implements

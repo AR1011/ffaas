@@ -43,6 +43,18 @@ func (s *MemoryStore) GetApp(id uuid.UUID) (types.App, error) {
 
 }
 
+func (s *MemoryStore) GetApps() ([]types.App, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	apps := make([]types.App, 0, len(s.apps))
+	for _, app := range s.apps {
+		apps = append(apps, app)
+	}
+
+	return apps, nil
+}
+
 func (s *MemoryStore) UpdateApp(id uuid.UUID, params types.AppUpdateParams) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -60,12 +72,12 @@ func (s *MemoryStore) UpdateApp(id uuid.UUID, params types.AppUpdateParams) erro
 		}
 		return s.updateEndpoint(endpoint, p)
 
-	case *types.CronUpdateParams:
-		cron, ok := app.(*types.Cron)
+	case *types.TaskUpdateParams:
+		task, ok := app.(*types.Task)
 		if !ok {
-			return fmt.Errorf("invalid params for app type %T. Want: %T  Got: %T", app, &types.CronUpdateParams{}, p)
+			return fmt.Errorf("invalid params for app type %T. Want: %T  Got: %T", app, &types.TaskUpdateParams{}, p)
 		}
-		return s.updateCron(cron, p)
+		return s.updateTask(task, p)
 
 	case *types.ProcessUpdateParams:
 		process, ok := app.(*types.Process)
@@ -118,7 +130,7 @@ func (s *MemoryStore) updateProcess(p *types.Process, params *types.ProcessUpdat
 	return nil
 }
 
-func (s *MemoryStore) updateCron(c *types.Cron, params *types.CronUpdateParams) error {
+func (s *MemoryStore) updateTask(c *types.Task, params *types.TaskUpdateParams) error {
 
 	if params.ActiveDeployID.String() != "00000000-0000-0000-0000-000000000000" {
 		c.ActiveDeployID = params.ActiveDeployID
@@ -167,7 +179,7 @@ func ensureIsApp(app types.App) error {
 	switch app.(type) {
 	case *types.Endpoint:
 		return nil
-	case *types.Cron:
+	case *types.Task:
 		return nil
 	case *types.Process:
 		return nil

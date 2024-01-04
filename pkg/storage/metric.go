@@ -19,7 +19,7 @@ func NewMemoryMetricStore() *MemoryMetricStore {
 	}
 }
 
-func (s *MemoryMetricStore) CreateMetric(metric types.RuntimeMetric) error {
+func (s *MemoryMetricStore) CreateRuntimeMetric(metric types.RuntimeMetric) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var (
@@ -37,12 +37,12 @@ func (s *MemoryMetricStore) CreateMetric(metric types.RuntimeMetric) error {
 	return nil
 }
 
-func (s *MemoryMetricStore) GetMetrics(id uuid.UUID) ([]types.RuntimeMetric, error) {
+func (s *MemoryMetricStore) GetRuntimeMetrics(id uuid.UUID) ([]types.RuntimeMetric, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	metrics, ok := s.metrics[id]
 	if !ok {
-		return nil, fmt.Errorf("could not find metrics for cron (%s)", id)
+		return nil, fmt.Errorf("could not find metrics for task (%s)", id)
 	}
 	return metrics, nil
 }

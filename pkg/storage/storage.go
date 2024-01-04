@@ -17,11 +17,12 @@ type Store interface {
 	CreateApp(types.App) error
 	UpdateApp(uuid.UUID, types.AppUpdateParams) error
 	GetApp(uuid.UUID) (types.App, error)
+	GetApps() ([]types.App, error)
 	CreateDeploy(types.Deploy) error
 	GetDeploy(uuid.UUID) (types.Deploy, error)
 }
 
 type MetricStore interface {
-	CreateMetric(types.RuntimeMetric) error
-	GetMetrics(uuid.UUID) ([]types.RuntimeMetric, error)
+	CreateRuntimeMetric(types.RuntimeMetric) error
+	GetRuntimeMetrics(uuid.UUID) ([]types.RuntimeMetric, error)
 }
