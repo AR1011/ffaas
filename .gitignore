@@ -3,3 +3,5 @@ config.toml
 .db
 .modcache
 *.wasm
+blobs
+.DS_Store

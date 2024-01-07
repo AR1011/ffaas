@@ -19,6 +19,11 @@ type MetricStore interface {
 	GetRuntimeMetrics(uuid.UUID) ([]types.RuntimeMetric, error)
 }
 
+type BlobStore interface {
+	CreateBlob(uuid.UUID, []byte) error
+	GetBlob(uuid.UUID) ([]byte, error)
+}
+
 type UpdateEndpointParams struct {
 	Environment    map[string]string
 	ActiveDeployID uuid.UUID

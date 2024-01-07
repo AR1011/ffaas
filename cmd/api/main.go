@@ -45,6 +45,16 @@ func main() {
 		log.Fatal(err)
 	}
 
+	blobStore := storage.NewDiskBlobStore(storage.BlobStoreConfig{
+		BaseDir: "./blobs",
+		Host:    true,
+	})
+
+	err = blobStore.Init()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	if seed {
 		seedEndpoint(store, modCache)
 	}
