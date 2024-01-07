@@ -130,39 +130,89 @@ func (b *DiskBlobStore) CreateBlob(id uuid.UUID, data []byte) error {
 	return err
 }
 
+// func (b *DiskBlobStore) GetBlob(id uuid.UUID) ([]byte, error) {
+// 	exists := false
+// 	st := time.Now()
+// 	// check if id exists in kv
+// 	_ = b.kv.View(func(txn *badger.Txn) error {
+// 		d, _ := txn.Get([]byte(id.String()))
+// 		if d != nil {
+// 			exists = true
+// 		}
+// 		return nil
+// 	})
+// 	fmt.Printf("kv lookup took: %s\n", time.Since(st))
+
+// 	if !exists {
+// 		return nil, fmt.Errorf("blob with id %s does not exist", id.String())
+// 	}
+
+// 	st = time.Now()
+// 	bytes, err := os.ReadFile(b.GetPath(id.String()))
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	fmt.Printf("readfile took: %s\n", time.Since(st))
+
+// 	if !b.config.Compress {
+// 		return bytes, nil
+// 	}
+
+// 	st = time.Now()
+// 	decompressed, err := b.decompress(bytes)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	fmt.Printf("decompress took: %s\n", time.Since(st))
+
+// 	return decompressed, nil
+// }
+
 func (b *DiskBlobStore) GetBlob(id uuid.UUID) ([]byte, error) {
-	exists := false
+	var exists bool
 	st := time.Now()
-	// check if id exists in kv
-	_ = b.kv.View(func(txn *badger.Txn) error {
-		d, _ := txn.Get([]byte(id.String()))
-		if d != nil {
-			exists = true
-		}
+
+	err := b.kv.View(func(txn *badger.Txn) error {
+		_, err := txn.Get([]byte(id.String()))
+		exists = err == nil
 		return nil
 	})
-	fmt.Printf("kv lookup took: %s\n", time.Since(st))
+	if err != nil {
+		return nil, err
+	}
 
+	fmt.Printf("kv lookup took: %s\n", time.Since(st))
 	if !exists {
 		return nil, fmt.Errorf("blob with id %s does not exist", id.String())
 	}
 
+	path := b.GetPath(id.String())
 	st = time.Now()
-	bytes, err := os.ReadFile(b.GetPath(id.String()))
+	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
+
+	info, _ := file.Stat()
+	buffer := make([]byte, info.Size())
+	_, err = file.Read(buffer)
+	if err != nil {
+		return nil, err
+	}
+
 	fmt.Printf("readfile took: %s\n", time.Since(st))
 
 	if !b.config.Compress {
-		return bytes, nil
+		return buffer, nil
 	}
 
 	st = time.Now()
-	decompressed, err := b.decompress(bytes)
+	decompressed, err := b.decompress(buffer)
 	if err != nil {
 		return nil, err
 	}
+
 	fmt.Printf("decompress took: %s\n", time.Since(st))
 
 	return decompressed, nil
