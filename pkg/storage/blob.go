@@ -91,21 +91,20 @@ func (b *DiskBlobStore) GetPath(s string) string {
 }
 
 func (b *DiskBlobStore) CreateBlob(id uuid.UUID, data []byte) error {
-	path := b.GetPath(id.String())
+	var (
+		path = b.GetPath(id.String())
+		st   = time.Now()
+		err  error
+	)
 
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return err
 	}
-
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+	fmt.Printf("mkdir took: %s\n", time.Since(st))
 
 	if b.config.Compress {
-		st := time.Now()
+		st = time.Now()
 		data, err = b.compress(data)
 		if err != nil {
 			return err
@@ -113,23 +112,27 @@ func (b *DiskBlobStore) CreateBlob(id uuid.UUID, data []byte) error {
 		fmt.Printf("compress took: %s\n", time.Since(st))
 	}
 
-	_, err = f.Write(data)
+	st = time.Now()
+	err = os.WriteFile(path, data, 0644)
 	if err != nil {
 		return err
 	}
+	fmt.Printf("writefile took: %s\n", time.Since(st))
 
+	st = time.Now()
 	// once written add it to kv
 	// id : size of blob
 	err = b.kv.Update(func(txn *badger.Txn) error {
 		err := txn.Set([]byte(id.String()), []byte(strconv.Itoa(len(data))))
 		return err
 	})
-
+	fmt.Printf("kv update took: %s\n", time.Since(st))
 	return err
 }
 
 func (b *DiskBlobStore) GetBlob(id uuid.UUID) ([]byte, error) {
 	exists := false
+	st := time.Now()
 	// check if id exists in kv
 	_ = b.kv.View(func(txn *badger.Txn) error {
 		d, _ := txn.Get([]byte(id.String()))
@@ -138,28 +141,24 @@ func (b *DiskBlobStore) GetBlob(id uuid.UUID) ([]byte, error) {
 		}
 		return nil
 	})
+	fmt.Printf("kv lookup took: %s\n", time.Since(st))
 
 	if !exists {
 		return nil, fmt.Errorf("blob with id %s does not exist", id.String())
 	}
 
-	f, err := os.Open(b.GetPath(id.String()))
+	st = time.Now()
+	bytes, err := os.ReadFile(b.GetPath(id.String()))
 	if err != nil {
 		return nil, err
 	}
-
-	defer f.Close()
-
-	bytes, err := io.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
+	fmt.Printf("readfile took: %s\n", time.Since(st))
 
 	if !b.config.Compress {
 		return bytes, nil
 	}
 
-	st := time.Now()
+	st = time.Now()
 	decompressed, err := b.decompress(bytes)
 	if err != nil {
 		return nil, err
