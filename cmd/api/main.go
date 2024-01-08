@@ -12,7 +12,7 @@ import (
 	"github.com/anthdm/raptor/internal/config"
 	"github.com/anthdm/raptor/internal/storage"
 	"github.com/anthdm/raptor/internal/types"
-	"github.com/anthdm/raptor/internal/webui/server"
+	"github.com/anthdm/raptor/internal/webui"
 	"github.com/google/uuid"
 	"github.com/tetratelabs/wazero"
 )
@@ -22,12 +22,12 @@ func main() {
 		modCache   = storage.NewDefaultModCache()
 		configFile string
 		seed       bool
-		webui      bool
+		webUI      bool
 	)
 	flagSet := flag.NewFlagSet("raptor", flag.ExitOnError)
 	flagSet.StringVar(&configFile, "config", "config.toml", "")
 	flagSet.BoolVar(&seed, "seed", false, "")
-	flagSet.BoolVar(&webui, "webui", false, "")
+	flagSet.BoolVar(&webUI, "webui", false, "")
 	flagSet.Parse(os.Args[1:])
 
 	err := config.Parse(configFile)
@@ -48,8 +48,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if webui {
-		WebUI := server.New(&server.WebUiConfig{
+	if webUI {
+		WebUI := webui.New(&webui.WebUiConfig{
 			HostAddr: config.Get().WebUIHostAddr,
 			WebUiURL: config.GetWebUIUrl(),
 			ApiAddr:  config.Get().APIServerAddr,
