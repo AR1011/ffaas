@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/anthdm/raptor/internal/types"
 	"github.com/google/uuid"
@@ -12,7 +13,9 @@ import (
 )
 
 type SQLStore struct {
-	db *sql.DB
+	db              *sql.DB
+	deploymentCache sync.Map
+	endpointCache   sync.Map
 }
 
 func NewSQLStore(user, password, dbname, host, port, sslmode string) (*SQLStore, error) {
@@ -58,9 +61,24 @@ RETURNING id`
 }
 
 func (s *SQLStore) GetEndpoint(id uuid.UUID) (*types.Endpoint, error) {
+	// check cache
+	// if cached, return
+
+	e, ok := s.endpointCache.Load(id)
+	if ok {
+		return e.(*types.Endpoint), nil
+	}
+
 	row := s.db.QueryRow("SELECT * FROM endpoint WHERE id = $1", id)
 	var endpoint types.Endpoint
 	err := scanEndpoint(row, &endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	// cache
+	s.endpointCache.Store(id, &endpoint)
+
 	return &endpoint, err
 }
 
@@ -89,11 +107,26 @@ func (s *SQLStore) UpdateEndpoint(id uuid.UUID, params UpdateEndpointParams) err
 }
 
 func (s *SQLStore) GetDeployment(id uuid.UUID) (*types.Deployment, error) {
+	// check cache
+	// if cached, return
+
+	d, ok := s.deploymentCache.Load(id)
+	if ok {
+		return d.(*types.Deployment), nil
+	}
+
 	stmt := "SELECT id, endpoint_id, hash, blob, created_at FROM deployment WHERE id = $1"
 	row := s.db.QueryRow(stmt, id)
 
 	var deploy types.Deployment
 	err := scanDeploy(row, &deploy)
+	if err != nil {
+		return nil, err
+	}
+
+	// cache
+	s.deploymentCache.Store(id, &deploy)
+
 	return &deploy, err
 }
 

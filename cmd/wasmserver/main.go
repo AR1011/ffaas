@@ -4,9 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/cluster"
@@ -39,10 +41,16 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	var (
 		modCache    = storage.NewDefaultModCache()
 		metricStore = store
 	)
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+	slog.SetDefault(logger)
 
 	remote := remote.New(config.Get().Cluster.WasmMemberAddr, nil)
 	engine, err := actor.NewEngine(&actor.EngineConfig{
@@ -51,12 +59,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	c, err := cluster.New(cluster.Config{
-		Region:          config.Get().Cluster.Region,
-		Engine:          engine,
-		ID:              config.Get().Cluster.ID,
-		ClusterProvider: cluster.NewSelfManagedProvider(),
-	})
+
+	cnf := cluster.NewConfig().
+		WithRegion(config.Get().Cluster.Region).
+		WithEngine(engine).
+		WithID(config.Get().Cluster.ID).
+		WithProvider(cluster.NewSelfManagedProvider(cluster.NewSelfManagedConfig())).
+		WithRequestTimeout(time.Second * 2)
+
+	c, err := cluster.New(cnf)
 	c.RegisterKind(actrs.KindRuntime, actrs.NewRuntime(store, modCache), &cluster.KindConfig{})
 	c.Engine().Spawn(actrs.NewMetric, actrs.KindMetric, actor.WithID("1"))
 	c.Start()

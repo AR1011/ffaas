@@ -17,7 +17,7 @@ apiToken			= "foobarbaz"
 authorization		= false
 
 [cluster]
-addr 				= "localhost:6666"
+wasmMemberAddr 		= "localhost:6666"
 id					= "wasm_member_1" 
 region				= "eu-west"
 
@@ -67,8 +67,8 @@ type Config struct {
 	APIToken       string
 	Authorization  bool
 
-	Storage Storage
 	Cluster Cluster
+	Storage Storage
 }
 
 func Parse(path string) error {
