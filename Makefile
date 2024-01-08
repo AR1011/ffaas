@@ -9,7 +9,7 @@ wasmserver: build
 	@./bin/wasmserver
 
 api: build
-	@./bin/api --seed
+	@./bin/api --seed --webui
 
 test:
 	@go test ./internal/* -v
@@ -28,5 +28,14 @@ goex:
 jsex:
 	javy compile examples/js/index.js -o examples/js/index.wasm
 
-postgres:
-	docker run --name raptordb -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres
+postgres-up:
+	docker compose -f ./docker/postgres.yml up -d
+
+postgres-down:
+	docker compose -f ./docker/postgres.yml down
+
+redis-up:
+	docker compose -f ./docker/redis.yml up -d
+
+redis-down:
+	docker compose -f ./docker/redis.yml down

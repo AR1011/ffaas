@@ -1,10 +1,58 @@
 # Raptor
+
 Build, Deploy, and Run your applications on the edge.
 
 # Installation
-Work in progress and rough on the edges. Documentation on how to install and run Raptor on your own machines is in the making.
 
-## API Server Endpoints
+1. Clone the repo
+2. ...
+
+# Usage
+
+### Compile examples to wasm
+
+```bash
+make goex
+```
+
+### Run API Server
+
+```bash
+make api
+```
+
+### Run Wasm Server
+
+```bash
+make wasmserver
+```
+
+#### Use docker to run Postgres
+
+If using the SQL storage driver, you may want to run Postgres and pgadmin4 in docker:
+To stop Postgres and pgadmin4:
+
+```bash
+make postgres-down
+```
+
+## CLI
+
+To build the raptor cli use:
+
+```bash
+make build
+```
+
+Then run the raptor cli with:
+
+```bash
+./bin/raptor help
+```
+
+## Web UI
+
+## API
 
 ### /status
 

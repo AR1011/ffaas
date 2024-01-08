@@ -1,0 +1,29 @@
+# To run : (make redis-up)
+# docker compose -f ./redis.yml up -d
+version: "3.8"
+
+services:
+  # Create redis container
+  # expose default redis port 6379
+  # mounts redis data to local ./tmp/redis-data
+  redis:
+    image: redis:latest
+    container_name: redis
+    hostname: redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - ./tmp/redis-data:/data
+    restart: unless-stopped
+
+  # Create redisinsight container
+  # expose default redisinsight port 8001
+  # This provides a web ui to view redis data
+  # http://localhost:8001
+  redisinsight:
+    image: redislabs/redisinsight:latest
+    container_name: redisinsight
+    hostname: redisinsight
+    ports:
+      - "127.0.0.1:8001:8001"
+    restart: unless-stopped

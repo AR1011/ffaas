@@ -12,6 +12,7 @@ const defaultConfig = `
 wasmServerAddr 		= "localhost:5000"
 apiServerAddr 		= "localhost:3000"
 storageDriver 		= "sqlite"
+webuiHostAddr 		= "localhost:8080"
 apiToken			= "foobarbaz"
 authorization		= false
 
@@ -27,10 +28,21 @@ name 				= "postgres"
 host				= "localhost"
 port				= "5432"
 sslmode 			= "disable"
+
 `
 
+func getDefaultConfig() Config {
+	// parse default config
+	var config Config
+	err := toml.Unmarshal([]byte(defaultConfig), &config)
+	if err != nil {
+		panic(err)
+	}
+	return config
+}
+
 // Config holds the global configuration which is READONLY.
-var config Config
+var config Config = getDefaultConfig()
 
 type Storage struct {
 	Name     string
@@ -51,6 +63,7 @@ type Config struct {
 	APIServerAddr  string
 	WASMServerAddr string
 	StorageDriver  string
+	WebUIHostAddr  string
 	APIToken       string
 	Authorization  bool
 
@@ -99,4 +112,8 @@ func GetWasmUrl() string {
 
 func GetApiUrl() string {
 	return makeURL(config.APIServerAddr)
+}
+
+func GetWebUIUrl() string {
+	return makeURL(config.WebUIHostAddr)
 }

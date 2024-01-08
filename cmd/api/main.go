@@ -12,6 +12,7 @@ import (
 	"github.com/anthdm/raptor/internal/config"
 	"github.com/anthdm/raptor/internal/storage"
 	"github.com/anthdm/raptor/internal/types"
+	"github.com/anthdm/raptor/internal/webui/server"
 	"github.com/google/uuid"
 	"github.com/tetratelabs/wazero"
 )
@@ -21,10 +22,12 @@ func main() {
 		modCache   = storage.NewDefaultModCache()
 		configFile string
 		seed       bool
+		webui      bool
 	)
 	flagSet := flag.NewFlagSet("raptor", flag.ExitOnError)
 	flagSet.StringVar(&configFile, "config", "config.toml", "")
 	flagSet.BoolVar(&seed, "seed", false, "")
+	flagSet.BoolVar(&webui, "webui", false, "")
 	flagSet.Parse(os.Args[1:])
 
 	err := config.Parse(configFile)
@@ -43,6 +46,18 @@ func main() {
 	store, err := storage.NewSQLStore(user, pw, dbname, host, port, sslmode)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if webui {
+		WebUI := server.New(&server.WebUiConfig{
+			HostAddr: config.Get().WebUIHostAddr,
+			WebUiURL: config.GetWebUIUrl(),
+			ApiAddr:  config.Get().APIServerAddr,
+			WasmAddr: config.Get().WASMServerAddr,
+		})
+		go func() {
+			log.Fatal(WebUI.Start())
+		}()
 	}
 
 	if seed {
@@ -81,7 +96,7 @@ func seedEndpoint(store storage.Store, cache storage.ModCacher) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("endpoint seeded: %s/live/%s\n", config.GetWasmUrl(), endpoint.ID)
+	fmt.Printf("endpoint seeded: \t%s/live/%s\n", config.GetWasmUrl(), endpoint.ID)
 }
 
 func compile(ctx context.Context, cache wazero.CompilationCache, blob []byte) {
