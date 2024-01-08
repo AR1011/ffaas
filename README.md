@@ -30,7 +30,14 @@ make wasmserver
 #### Use docker to run Postgres
 
 If using the SQL storage driver, you may want to run Postgres and pgadmin4 in docker:
-To stop Postgres and pgadmin4:
+
+```bash
+make postgres-up
+```
+
+Then visit http://localhost:5050 to access pgadmin4. The default username is `admin@admin.com` and the default password is `admin`.
+
+#### To stop Postgres and pgadmin4:
 
 ```bash
 make postgres-down
