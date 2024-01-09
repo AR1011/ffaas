@@ -54,26 +54,33 @@ func (r *Runtime) Receive(c *actor.Context) {
 
 func (r *Runtime) handleHTTPRequest(ctx *actor.Context, msg *proto.HTTPRequest) {
 	r.deployID = uuid.MustParse(msg.DeploymentID)
+	st := time.Now()
 	deploy, err := r.store.GetDeployment(r.deployID)
 	if err != nil {
 		slog.Warn("runtime could not find deploy from store", "err", err, "id", r.deployID)
 		respondError(ctx, http.StatusInternalServerError, "internal server error", msg.ID)
 		return
 	}
+	fmt.Printf("get deployment : %s\n", time.Since(st))
 
+	st = time.Now()
 	modCache, ok := r.cache.Get(deploy.EndpointID)
 	if !ok {
 		modCache = wazero.NewCompilationCache()
 		slog.Warn("no cache hit", "endpoint", deploy.EndpointID)
 	}
+	fmt.Printf("get cache : %s\n", time.Since(st))
 
+	st = time.Now()
 	b, err := prot.Marshal(msg)
 	if err != nil {
 		slog.Warn("failed to marshal incoming HTTP request", "err", err)
 		respondError(ctx, http.StatusInternalServerError, "internal server error", msg.ID)
 		return
 	}
+	fmt.Printf("marshal : %s\n", time.Since(st))
 
+	st = time.Now()
 	in := bytes.NewReader(b)
 	out := &bytes.Buffer{}
 	args := runtime.InvokeArgs{
@@ -81,7 +88,9 @@ func (r *Runtime) handleHTTPRequest(ctx *actor.Context, msg *proto.HTTPRequest) 
 		In:    in,
 		Out:   out,
 		Cache: modCache,
+		Debug: true,
 	}
+	fmt.Printf("args : %s\n", time.Since(st))
 
 	switch msg.Runtime {
 	case "go":
@@ -93,29 +102,39 @@ func (r *Runtime) handleHTTPRequest(ctx *actor.Context, msg *proto.HTTPRequest) 
 		err = fmt.Errorf("invalid runtime: %s", msg.Runtime)
 	}
 
+	st = time.Now()
 	err = runtime.Invoke(context.Background(), args)
 	if err != nil {
 		slog.Error("runtime invoke error", "err", err)
 		respondError(ctx, http.StatusInternalServerError, "internal server error", msg.ID)
 		return
 	}
+	fmt.Printf("invoke : %s\n", time.Since(st))
 
+	st = time.Now()
 	res, status, err := shared.ParseRuntimeHTTPResponse(out.String())
 	if err != nil {
 		respondError(ctx, http.StatusInternalServerError, "internal server error", msg.ID)
 		return
 	}
+	fmt.Printf("parse response : %s\n", time.Since(st))
 	resp := &proto.HTTPResponse{
 		Response:   []byte(res),
 		RequestID:  msg.ID,
 		StatusCode: int32(status),
 	}
 
+	st = time.Now()
 	ctx.Respond(resp)
+	fmt.Printf("respond : %s\n", time.Since(st))
 
+	st = time.Now()
 	r.cache.Put(deploy.EndpointID, modCache)
+	fmt.Printf("put cache : %s\n", time.Since(st))
 
+	st = time.Now()
 	ctx.Engine().Poison(ctx.PID())
+	fmt.Printf("poison : %s\n", time.Since(st))
 
 	// only send metrics when its a request on LIVE
 	if !msg.Preview {

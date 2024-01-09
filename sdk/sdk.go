@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/anthdm/raptor/proto"
 	// _ "github.com/stealthrocket/net/http"
@@ -27,7 +28,9 @@ type request struct {
 }
 
 func Handle(h http.Handler) {
+	st := time.Now()
 	b, err := io.ReadAll(os.Stdin)
+	fmt.Println("readall", time.Since(st))
 	if err != nil {
 		log.Fatal(err)
 	}

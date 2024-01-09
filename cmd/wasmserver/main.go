@@ -10,6 +10,9 @@ import (
 	"syscall"
 	"time"
 
+	"net/http"
+	_ "net/http/pprof"
+
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/cluster"
 	"github.com/anthdm/hollywood/remote"
@@ -19,6 +22,9 @@ import (
 )
 
 func main() {
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 	var configFile string
 	flagSet := flag.NewFlagSet("raptor", flag.ExitOnError)
 	flagSet.StringVar(&configFile, "config", "config.toml", "")

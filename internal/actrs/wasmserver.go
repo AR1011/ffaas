@@ -1,9 +1,11 @@
 package actrs
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/anthdm/hollywood/actor"
 	"github.com/anthdm/hollywood/cluster"
@@ -87,6 +89,7 @@ func (s *WasmServer) sendRequestToRuntime(req *proto.HTTPRequest) {
 
 // TODO(anthdm): Handle the favicon.ico
 func (s *WasmServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("\n======================================")
 	path := strings.TrimPrefix(r.URL.Path, "/")
 	path = strings.TrimSuffix(path, "/")
 	pathParts := strings.Split(path, "/")
@@ -118,11 +121,14 @@ func (s *WasmServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writeResponse(w, http.StatusBadRequest, []byte(err.Error()))
 			return
 		}
+		st := time.Now()
 		endpoint, err := s.store.GetEndpoint(endpointID)
 		if err != nil {
 			writeResponse(w, http.StatusNotFound, []byte(err.Error()))
 			return
 		}
+		fmt.Println("get endpoint", time.Since(st))
+
 		if !endpoint.HasActiveDeploy() {
 			writeResponse(w, http.StatusNotFound, []byte("endpoint does not have any published deploy"))
 			return
@@ -140,6 +146,7 @@ func (s *WasmServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writeResponse(w, http.StatusBadRequest, []byte(err.Error()))
 			return
 		}
+
 		deploy, err := s.store.GetDeployment(deployID)
 		if err != nil {
 			writeResponse(w, http.StatusBadRequest, []byte(err.Error()))
@@ -159,8 +166,13 @@ func (s *WasmServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		req.Preview = true
 	}
 
+	st := time.Now()
 	reqres := newRequestWithResponse(req)
+	fmt.Println("new request with response", time.Since(st))
+
+	st = time.Now()
 	s.cluster.Engine().Send(s.self, reqres)
+	fmt.Println("send to runtime", time.Since(st))
 
 	resp := <-reqres.response
 

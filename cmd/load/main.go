@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -15,6 +16,7 @@ type timeReport struct {
 }
 
 type TimeManager struct {
+	lock  sync.Mutex
 	start time.Time
 	times []timeReport
 }
@@ -26,10 +28,15 @@ func NewTimeManager() *TimeManager {
 }
 
 func (t *TimeManager) AddTime(tr timeReport) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
 	t.times = append(t.times, tr)
 }
 
 func (t *TimeManager) Stat() {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
 	count := len(t.times)
 
 	rps := float64(count) / time.Since(t.start).Seconds()

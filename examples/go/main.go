@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
 	raptor "github.com/anthdm/raptor/sdk"
@@ -8,8 +9,9 @@ import (
 )
 
 func handleReq(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("can u see me")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Hello World"))
+	w.Write([]byte("yo from handle"))
 }
 
 func main() {
